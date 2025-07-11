@@ -85,14 +85,26 @@ export function ApiKeyManager() {
       return;
     }
 
+    if (!config.model) {
+      alert("Please select a model");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
+      // Prepare the test configuration with proper baseUrl
+      const testConfig = {
+        ...config,
+        baseUrl: config.baseUrl || provider.baseUrl, // Use provider's baseUrl if not set
+        provider: config.provider
+      };
+
       // Test the API key
       const response = await fetch("/api/test-api-key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify(testConfig),
       });
 
       const result = await response.json();
@@ -106,7 +118,8 @@ export function ApiKeyManager() {
         alert(result.error || "Failed to validate API key");
       }
     } catch (error) {
-      alert("Failed to test API key");
+      console.error("API key test error:", error);
+      alert("Failed to test API key. Please check your internet connection.");
     } finally {
       setIsLoading(false);
     }
@@ -221,6 +234,7 @@ export function ApiKeyManager() {
 
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={handleSave}
             disabled={isLoading}
             className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -230,6 +244,7 @@ export function ApiKeyManager() {
           </button>
           {isConfigured && (
             <button
+              type="button"
               onClick={handleClear}
               className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
