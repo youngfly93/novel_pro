@@ -129,11 +129,11 @@ export function ApiKeyManager() {
   return (
     <div className="w-full max-w-2xl mx-auto bg-white rounded-lg border shadow-sm">
       <div className="flex flex-col space-y-1.5 p-6">
-        <h3 className="text-2xl font-semibold leading-none tracking-tight flex items-center gap-2">
-          <Key className="h-5 w-5" />
+        <h3 className="text-2xl font-semibold leading-none tracking-tight flex items-center gap-2 text-gray-900">
+          <Key className="h-5 w-5 text-gray-700" />
           AI API Configuration
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-700">
           Configure your AI API key to enable AI-powered writing features.
           {isConfigured && (
             <span className="text-green-600 font-medium ml-2">✓ Configured</span>
@@ -142,25 +142,25 @@ export function ApiKeyManager() {
       </div>
       <div className="p-6 pt-0 space-y-4">
         <div className="space-y-2">
-          <label htmlFor="provider" className="text-sm font-medium">AI Provider</label>
+          <label htmlFor="provider" className="text-sm font-medium text-gray-900">AI Provider</label>
           <select
             value={config.provider}
             onChange={(e) => handleProviderChange(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           >
             {Object.entries(PROVIDERS).map(([key, provider]) => (
-              <option key={key} value={key}>
+              <option key={key} value={key} className="text-gray-900">
                 {provider.name}
               </option>
             ))}
           </select>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-700">
             Don't have an account?{" "}
             <a
               href={currentProvider?.signupUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline inline-flex items-center gap-1"
+              className="text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 font-medium"
             >
               Sign up for {currentProvider?.name}
               <ExternalLink className="h-3 w-3" />
@@ -169,14 +169,14 @@ export function ApiKeyManager() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="model" className="text-sm font-medium">AI Model</label>
+          <label htmlFor="model" className="text-sm font-medium text-gray-900">AI Model</label>
           <select
             value={config.model}
             onChange={(e) => setConfig({ ...config, model: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           >
             {currentProvider?.models.map((model) => (
-              <option key={model.id} value={model.id}>
+              <option key={model.id} value={model.id} className="text-gray-900">
                 {model.name}
               </option>
             ))}
@@ -184,7 +184,7 @@ export function ApiKeyManager() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="apiKey" className="text-sm font-medium">API Key</label>
+          <label htmlFor="apiKey" className="text-sm font-medium text-gray-900">API Key</label>
           <div className="relative">
             <input
               id="apiKey"
@@ -192,43 +192,50 @@ export function ApiKeyManager() {
               placeholder={`Enter your ${currentProvider?.name} API key`}
               value={config.apiKey}
               onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm pr-10"
+              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 pr-10 placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             <button
               type="button"
-              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-gray-100"
+              className="absolute right-0 top-0 h-full px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-r-md"
               onClick={() => setShowKey(!showKey)}
             >
               {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-700">
             Your API key is stored locally in your browser and never sent to our servers.
           </p>
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="baseUrl" className="text-sm font-medium">API Base URL</label>
+          <label htmlFor="baseUrl" className="text-sm font-medium text-gray-900">API Base URL</label>
           <input
             id="baseUrl"
             value={config.baseUrl}
             onChange={(e) => setConfig({ ...config, baseUrl: e.target.value })}
             placeholder="API base URL"
             disabled
-            className="flex h-10 w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700 cursor-not-allowed"
           />
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={isLoading} className="flex-1">
+          <button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Save className="h-4 w-4 mr-2" />
             {isLoading ? "Testing..." : "Save & Test"}
-          </Button>
+          </button>
           {isConfigured && (
-            <Button onClick={handleClear} className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+            <button
+              onClick={handleClear}
+              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Clear
-            </Button>
+            </button>
           )}
         </div>
       </div>
