@@ -160,7 +160,6 @@ export async function POST(req: Request): Promise<Response> {
     ])
     .run();
 
-  try {
     // Debug: Log the actual API key being used
     console.log('API Key being used:', apiKey ? apiKey.substring(0, 15) + '...' : 'NOT SET');
     console.log('Model name:', modelName);
