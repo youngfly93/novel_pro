@@ -3,7 +3,7 @@
 import { Command, CommandInput } from "@/components/tailwind/ui/command";
 
 import { useCompletion } from "ai/react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Settings } from "lucide-react";
 import { useEditor } from "novel";
 import { addAIHighlight } from "novel";
 import { useState } from "react";
@@ -15,6 +15,7 @@ import Magic from "../ui/icons/magic";
 import { ScrollArea } from "../ui/scroll-area";
 import AICompletionCommands from "./ai-completion-command";
 import AISelectorCommands from "./ai-selector-commands";
+import { useApiConfig } from "@/hooks/use-api-config";
 //TODO: I think it makes more sense to create a custom Tiptap extension for this functionality https://tiptap.dev/docs/editor/ai/introduction
 
 interface AISelectorProps {
@@ -25,10 +26,14 @@ interface AISelectorProps {
 export function AISelector({ onOpenChange }: AISelectorProps) {
   const { editor } = useEditor();
   const [inputValue, setInputValue] = useState("");
+  const { config, hasValidConfig, isLoaded } = useApiConfig();
 
   const { completion, complete, isLoading } = useCompletion({
     // id: "novel",
     api: "/api/generate",
+    body: {
+      apiConfig: config, // Include user's API configuration
+    },
     onResponse: (response) => {
       if (response.status === 429) {
         toast.error("You have reached your request limit for the day.");
@@ -41,6 +46,32 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
   });
 
   const hasCompletion = completion.length > 0;
+
+  // Show API configuration prompt if not configured
+  if (isLoaded && !hasValidConfig) {
+    return (
+      <Command className="w-[350px]">
+        <div className="p-4 text-center space-y-3">
+          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-purple-100 rounded-full">
+            <Settings className="w-6 h-6 text-purple-600" />
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900">Configure AI API</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Set up your API key to enable AI-powered writing features
+            </p>
+          </div>
+          <Button
+            onClick={() => window.open('/settings', '_blank')}
+            className="w-full bg-purple-600 hover:bg-purple-700"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Open Settings
+          </Button>
+        </div>
+      </Command>
+    );
+  }
 
   return (
     <Command className="w-[350px]">
@@ -79,14 +110,14 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
               onClick={() => {
                 if (completion)
                   return complete(completion, {
-                    body: { option: "zap", command: inputValue },
+                    body: { option: "zap", command: inputValue, apiConfig: config },
                   }).then(() => setInputValue(""));
 
                 const slice = editor.state.selection.content();
                 const text = editor.storage.markdown.serializer.serialize(slice.content);
 
                 complete(text, {
-                  body: { option: "zap", command: inputValue },
+                  body: { option: "zap", command: inputValue, apiConfig: config },
                 }).then(() => setInputValue(""));
               }}
             >
@@ -102,7 +133,7 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
               completion={completion}
             />
           ) : (
-            <AISelectorCommands onSelect={(value, option) => complete(value, { body: { option } })} />
+            <AISelectorCommands onSelect={(value, option) => complete(value, { body: { option, apiConfig: config } })} />
           )}
         </>
       )}

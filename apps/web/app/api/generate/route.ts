@@ -11,28 +11,51 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "anthropic/claude-3.5-sonnet";
 export const runtime = "edge";
 
 export async function POST(req: Request): Promise<Response> {
-  // Debug: Log environment variables (remove in production)
-  console.log('Environment check:', {
-    OPENAI_API_KEY: OPENAI_API_KEY ? 'SET' : 'NOT SET',
-    OPENAI_BASE_URL: OPENAI_BASE_URL,
-    OPENAI_MODEL: OPENAI_MODEL,
-    NODE_ENV: process.env.NODE_ENV
-  });
+  try {
+    const body = await req.json();
+    const { prompt, option, command, apiConfig } = body;
 
-  // Check if the OPENAI_API_KEY is set, if not return 400
-  if (!OPENAI_API_KEY || OPENAI_API_KEY === "") {
-    return new Response(JSON.stringify({
-      error: "Missing OPENAI_API_KEY",
-      message: "Make sure to add OPENAI_API_KEY to your .env file.",
-      debug: {
-        NODE_ENV: process.env.NODE_ENV,
-        hasEnvFile: 'Check if .env file exists in apps/web directory'
-      }
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
+    // Use user-provided API config or fall back to environment variables
+    let apiKey = OPENAI_API_KEY;
+    let baseUrl = OPENAI_BASE_URL;
+    let modelName = OPENAI_MODEL;
+
+    if (apiConfig && apiConfig.apiKey) {
+      apiKey = apiConfig.apiKey;
+      baseUrl = apiConfig.baseUrl || OPENAI_BASE_URL;
+      modelName = apiConfig.model || OPENAI_MODEL;
+      console.log('Using user-provided API configuration');
+    } else {
+      console.log('Using environment variables for API configuration');
+    }
+
+    // Check if we have an API key from either source
+    if (!apiKey || apiKey === "") {
+      const encoder = new TextEncoder();
+      const errorStream = new ReadableStream({
+        start(controller) {
+          const errorMessage = "Please configure your API key in the settings to use AI features.";
+          const chunk = `0:"${errorMessage}"\n`;
+          controller.enqueue(encoder.encode(chunk));
+          controller.close();
+        }
+      });
+
+      return new Response(errorStream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+
+    console.log('API Configuration:', {
+      hasApiKey: !!apiKey,
+      baseUrl: baseUrl,
+      model: modelName,
+      source: apiConfig ? 'user-provided' : 'environment'
     });
-  }
   if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
     const ip = req.headers.get("x-forwarded-for");
     const ratelimit = new Ratelimit({
@@ -56,7 +79,7 @@ export async function POST(req: Request): Promise<Response> {
 
   // We'll use direct fetch instead of AI SDK due to authentication issues
 
-  const { prompt, option, command } = await req.json();
+  // Extract prompt, option, and command from the already parsed body
   const messages = match(option)
     .with("continue", () => [
       {
@@ -145,12 +168,13 @@ export async function POST(req: Request): Promise<Response> {
     console.log('Model name:', modelName);
     console.log('Messages:', JSON.stringify(messages, null, 2));
 
-    // Try multiple models in order of preference (Claude first)
+    // Try multiple models in order of preference, starting with user's selected model
     const modelsToTry = [
+      modelName, // User's selected model first
       "anthropic/claude-3.5-sonnet",
       "openai/gpt-4o-mini",
       "meta-llama/llama-3.2-3b-instruct:free"
-    ];
+    ].filter((model, index, arr) => arr.indexOf(model) === index); // Remove duplicates
 
     let response = null;
     let lastError = null;
@@ -167,10 +191,10 @@ export async function POST(req: Request): Promise<Response> {
       };
 
       try {
-        response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+        response = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
             'HTTP-Referer': 'https://novel.sh',
             'X-Title': 'Novel Editor'

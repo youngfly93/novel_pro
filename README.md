@@ -54,18 +54,24 @@ A Notion-style WYSIWYG editor with AI-powered autocompletion, enhanced with Open
    pnpm install
    ```
 
-3. **Environment Configuration**
-   
+3. **API Configuration (Two Options)**
+
+   **Option A: Runtime Configuration (Recommended)**
+   - No environment setup needed
+   - Configure API keys through the web interface
+   - Click "Settings" in the app to add your API key
+
+   **Option B: Environment Variables**
    Create `.env.local` file in the `apps/web` directory:
    ```env
-   # OpenRouter API Configuration
+   # OpenRouter API Configuration (Optional - can be set via UI)
    OPENAI_API_KEY=your_openrouter_api_key_here
    OPENAI_BASE_URL=https://openrouter.ai/api/v1
    OPENAI_MODEL=anthropic/claude-3.5-sonnet
-   
+
    # Optional: Vercel Blob (for image uploads)
    BLOB_READ_WRITE_TOKEN=your_blob_token_here
-   
+
    # Optional: Vercel KV (for rate limiting)
    KV_REST_API_URL=your_kv_url_here
    KV_REST_API_TOKEN=your_kv_token_here
@@ -81,16 +87,30 @@ A Notion-style WYSIWYG editor with AI-powered autocompletion, enhanced with Open
 
 ## 🔑 API Key Setup
 
-### OpenRouter Setup
-1. Visit [OpenRouter](https://openrouter.ai/)
+### Method 1: Web Interface (Recommended)
+1. Start the application: `pnpm dev`
+2. Open `http://localhost:3000`
+3. Click the "Settings" button in the top navigation
+4. Choose your AI provider (OpenRouter or OpenAI)
+5. Enter your API key and select a model
+6. Click "Save & Test" to verify the configuration
+
+### Method 2: Environment Variables
+1. Visit [OpenRouter](https://openrouter.ai/) or [OpenAI](https://platform.openai.com/)
 2. Create an account and get your API key
 3. Add credits to your account for paid models
 4. Copy your API key to the `.env.local` file
 
-### Supported Models
-- `anthropic/claude-3.5-sonnet` (Recommended)
+### Supported Providers & Models
+**OpenRouter** (Recommended - Access to multiple models):
+- `anthropic/claude-3.5-sonnet` (High quality)
 - `openai/gpt-4o-mini` (Cost-effective)
 - `meta-llama/llama-3.2-3b-instruct:free` (Free tier)
+
+**OpenAI**:
+- `gpt-4o-mini` (Cost-effective)
+- `gpt-4o` (High quality)
+- `gpt-3.5-turbo` (Fast)
 
 ## 🎮 Usage
 
@@ -136,9 +156,10 @@ novel_pro/
 
 ### Key Features Implementation
 - **Multi-model AI**: Automatic fallback between different AI providers
+- **Runtime Configuration**: Users can configure API keys through the web interface
 - **Error Handling**: Graceful degradation when AI services are unavailable
 - **Rate Limiting**: Built-in protection against API abuse
-- **Security**: API keys are server-side only, never exposed to client
+- **Security**: API keys are stored locally in browser, never sent to our servers
 
 ## 🚀 Deployment
 
