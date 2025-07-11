@@ -1,13 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/tailwind/ui/button";
 import { Eye, EyeOff, Key, Save, Trash2, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
 
 interface ApiKeyConfig {
   apiKey: string;
@@ -80,13 +75,13 @@ export function ApiKeyManager() {
 
   const handleSave = async () => {
     if (!config.apiKey.trim()) {
-      toast.error("Please enter an API key");
+      alert("Please enter an API key");
       return;
     }
 
     const provider = PROVIDERS[config.provider as keyof typeof PROVIDERS];
     if (!config.apiKey.startsWith(provider.keyPrefix)) {
-      toast.error(`${provider.name} API keys should start with "${provider.keyPrefix}"`);
+      alert(`${provider.name} API keys should start with "${provider.keyPrefix}"`);
       return;
     }
 
@@ -106,12 +101,12 @@ export function ApiKeyManager() {
         // Save to localStorage
         localStorage.setItem("novel-api-config", JSON.stringify(config));
         setIsConfigured(true);
-        toast.success("API key configured successfully!");
+        alert("API key configured successfully!");
       } else {
-        toast.error(result.error || "Failed to validate API key");
+        alert(result.error || "Failed to validate API key");
       }
     } catch (error) {
-      toast.error("Failed to test API key");
+      alert("Failed to test API key");
     } finally {
       setIsLoading(false);
     }
@@ -126,41 +121,40 @@ export function ApiKeyManager() {
       provider: "openrouter",
     });
     setIsConfigured(false);
-    toast.success("API configuration cleared");
+    alert("API configuration cleared");
   };
 
   const currentProvider = PROVIDERS[config.provider as keyof typeof PROVIDERS];
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <div className="w-full max-w-2xl mx-auto bg-white rounded-lg border shadow-sm">
+      <div className="flex flex-col space-y-1.5 p-6">
+        <h3 className="text-2xl font-semibold leading-none tracking-tight flex items-center gap-2">
           <Key className="h-5 w-5" />
           AI API Configuration
-        </CardTitle>
-        <CardDescription>
+        </h3>
+        <p className="text-sm text-gray-600">
           Configure your AI API key to enable AI-powered writing features.
           {isConfigured && (
             <span className="text-green-600 font-medium ml-2">✓ Configured</span>
           )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </p>
+      </div>
+      <div className="p-6 pt-0 space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="provider">AI Provider</Label>
-          <Select value={config.provider} onValueChange={handleProviderChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select AI provider" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(PROVIDERS).map(([key, provider]) => (
-                <SelectItem key={key} value={key}>
-                  {provider.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-muted-foreground">
+          <label htmlFor="provider" className="text-sm font-medium">AI Provider</label>
+          <select
+            value={config.provider}
+            onChange={(e) => handleProviderChange(e.target.value)}
+            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+          >
+            {Object.entries(PROVIDERS).map(([key, provider]) => (
+              <option key={key} value={key}>
+                {provider.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-gray-600">
             Don't have an account?{" "}
             <a
               href={currentProvider?.signupUrl}
@@ -175,55 +169,53 @@ export function ApiKeyManager() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="model">AI Model</Label>
-          <Select value={config.model} onValueChange={(model) => setConfig({ ...config, model })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select AI model" />
-            </SelectTrigger>
-            <SelectContent>
-              {currentProvider?.models.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  {model.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <label htmlFor="model" className="text-sm font-medium">AI Model</label>
+          <select
+            value={config.model}
+            onChange={(e) => setConfig({ ...config, model: e.target.value })}
+            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+          >
+            {currentProvider?.models.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="apiKey">API Key</Label>
+          <label htmlFor="apiKey" className="text-sm font-medium">API Key</label>
           <div className="relative">
-            <Input
+            <input
               id="apiKey"
               type={showKey ? "text" : "password"}
               placeholder={`Enter your ${currentProvider?.name} API key`}
               value={config.apiKey}
               onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-              className="pr-10"
+              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm pr-10"
             />
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-gray-100"
               onClick={() => setShowKey(!showKey)}
             >
               {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
+            </button>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-600">
             Your API key is stored locally in your browser and never sent to our servers.
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="baseUrl">API Base URL</Label>
-          <Input
+          <label htmlFor="baseUrl" className="text-sm font-medium">API Base URL</label>
+          <input
             id="baseUrl"
             value={config.baseUrl}
             onChange={(e) => setConfig({ ...config, baseUrl: e.target.value })}
             placeholder="API base URL"
             disabled
+            className="flex h-10 w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm"
           />
         </div>
 
@@ -233,13 +225,13 @@ export function ApiKeyManager() {
             {isLoading ? "Testing..." : "Save & Test"}
           </Button>
           {isConfigured && (
-            <Button variant="outline" onClick={handleClear}>
+            <Button onClick={handleClear} className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
               <Trash2 className="h-4 w-4 mr-2" />
               Clear
             </Button>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
