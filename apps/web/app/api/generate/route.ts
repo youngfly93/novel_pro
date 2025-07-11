@@ -56,7 +56,8 @@ export async function POST(req: Request): Promise<Response> {
       model: modelName,
       source: apiConfig ? 'user-provided' : 'environment'
     });
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
     const ip = req.headers.get("x-forwarded-for");
     const ratelimit = new Ratelimit({
       redis: kv,
@@ -159,12 +160,9 @@ export async function POST(req: Request): Promise<Response> {
     ])
     .run();
 
-  // Use custom model if specified (for OpenRouter support), otherwise default to gpt-4o-mini
-  const modelName = OPENAI_MODEL;
-  
   try {
     // Debug: Log the actual API key being used
-    console.log('API Key being used:', OPENAI_API_KEY ? OPENAI_API_KEY.substring(0, 15) + '...' : 'NOT SET');
+    console.log('API Key being used:', apiKey ? apiKey.substring(0, 15) + '...' : 'NOT SET');
     console.log('Model name:', modelName);
     console.log('Messages:', JSON.stringify(messages, null, 2));
 
