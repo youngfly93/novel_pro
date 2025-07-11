@@ -1,104 +1,183 @@
-<a href="https://novel.sh">
-  <img alt="Novel is a Notion-style WYSIWYG editor with AI-powered autocompletions." src="https://novel.sh/opengraph-image.png">
-  <h1 align="center">Novel</h1>
-</a>
+# Novel Pro - AI-Powered WYSIWYG Editor
 
-<p align="center">
-  An open-source Notion-style WYSIWYG editor with AI-powered autocompletions. 
-</p>
+A Notion-style WYSIWYG editor with AI-powered autocompletion, enhanced with OpenRouter integration for multiple AI models.
 
-<p align="center">
-  <a href="https://news.ycombinator.com/item?id=36360789"><img src="https://img.shields.io/badge/Hacker%20News-369-%23FF6600" alt="Hacker News"></a>
-  <a href="https://github.com/steven-tey/novel/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/steven-tey/novel?label=license&logo=github&color=f80&logoColor=fff" alt="License" />
-  </a>
-  <a href="https://github.com/steven-tey/novel"><img src="https://img.shields.io/github/stars/steven-tey/novel?style=social" alt="Novel.sh's GitHub repo"></a>
-</p>
+## ✨ Features
 
-<p align="center">
-  <a href="#introduction"><strong>Introduction</strong></a> ·
-  <a href="#deploy-your-own"><strong>Deploy Your Own</strong></a> ·
-  <a href="#setting-up-locally"><strong>Setting Up Locally</strong></a> ·
-  <a href="#tech-stack"><strong>Tech Stack</strong></a> ·
-  <a href="#contributing"><strong>Contributing</strong></a> ·
-  <a href="#license"><strong>License</strong></a>
-</p>
-<br/>
+- 🎨 **Notion-style Editor**: Clean, intuitive WYSIWYG editing experience
+- 🤖 **AI-Powered Writing**: Multiple AI models for text generation and improvement
+- 🔄 **Smart Model Fallback**: Automatically switches between AI models for optimal availability
+- 📝 **Rich Text Editing**: Support for markdown, links, images, and more
+- ⚡ **Real-time Collaboration**: Built with modern web technologies
+- 🎯 **Customizable**: Easy to extend and customize
 
-## Docs (WIP)
+## 🚀 AI Capabilities
 
-https://novel.sh/docs/introduction
+### Supported AI Models (in priority order):
+1. **Claude 3.5 Sonnet** - High-quality responses for complex tasks
+2. **GPT-4o Mini** - Fast and cost-effective alternative
+3. **Llama 3.2 3B** - Free model for basic tasks
 
-## Introduction
+### AI Functions:
+- **Continue Writing** - Extend your text naturally
+- **Improve Writing** - Enhance clarity and style
+- **Fix Grammar** - Correct grammar and spelling errors
+- **Make Shorter** - Condense text while preserving meaning
+- **Make Longer** - Expand text with additional details
+- **Custom Commands** - Use natural language to transform text
 
-[Novel](https://novel.sh/) is a Notion-style WYSIWYG editor with AI-powered autocompletions.
+## 🛠️ Tech Stack
 
-https://github.com/steven-tey/novel/assets/28986134/2099877f-4f2b-4b1c-8782-5d803d63be5c
+- **Frontend**: Next.js 15, React 18, TypeScript
+- **Editor**: Tiptap (ProseMirror-based)
+- **AI Integration**: OpenRouter API with multiple model support
+- **Styling**: Tailwind CSS
+- **Build System**: Turbo (monorepo)
+- **Package Manager**: pnpm
 
-<br />
+## 📦 Installation
 
-## Deploy Your Own
+### Prerequisites
+- Node.js 18+ 
+- pnpm (recommended) or npm
 
-You can deploy your own version of Novel to Vercel with one click:
+### Setup
 
-[![Deploy with Vercel](https://vercel.com/button)](https://stey.me/novel-deploy)
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/youngfly93/novel_pro.git
+   cd novel_pro
+   ```
 
-## Setting Up Locally
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-To set up Novel locally, you'll need to clone the repository and set up the following environment variables:
+3. **Environment Configuration**
+   
+   Create `.env.local` file in the `apps/web` directory:
+   ```env
+   # OpenRouter API Configuration
+   OPENAI_API_KEY=your_openrouter_api_key_here
+   OPENAI_BASE_URL=https://openrouter.ai/api/v1
+   OPENAI_MODEL=anthropic/claude-3.5-sonnet
+   
+   # Optional: Vercel Blob (for image uploads)
+   BLOB_READ_WRITE_TOKEN=your_blob_token_here
+   
+   # Optional: Vercel KV (for rate limiting)
+   KV_REST_API_URL=your_kv_url_here
+   KV_REST_API_TOKEN=your_kv_token_here
+   ```
 
-- `OPENAI_API_KEY` – your OpenAI API key (you can get one [here](https://platform.openai.com/account/api-keys))
-- `BLOB_READ_WRITE_TOKEN` – your Vercel Blob read/write token (currently [still in beta](https://vercel.com/docs/storage/vercel-blob/quickstart#quickstart), but feel free to [sign up on this form](https://vercel.fyi/blob-beta) for access)
+4. **Start development server**
+   ```bash
+   pnpm dev
+   ```
 
-If you've deployed this to Vercel, you can also use [`vc env pull`](https://vercel.com/docs/cli/env#exporting-development-environment-variables) to pull the environment variables from your Vercel project.
+5. **Open in browser**
+   Navigate to `http://localhost:3000`
 
-To run the app locally, you can run the following commands:
+## 🔑 API Key Setup
+
+### OpenRouter Setup
+1. Visit [OpenRouter](https://openrouter.ai/)
+2. Create an account and get your API key
+3. Add credits to your account for paid models
+4. Copy your API key to the `.env.local` file
+
+### Supported Models
+- `anthropic/claude-3.5-sonnet` (Recommended)
+- `openai/gpt-4o-mini` (Cost-effective)
+- `meta-llama/llama-3.2-3b-instruct:free` (Free tier)
+
+## 🎮 Usage
+
+### Basic Editing
+- Type naturally in the editor
+- Use `/` to open the command menu
+- Format text with markdown shortcuts
+
+### AI Features
+- Select text and click the AI button
+- Use `++` shortcut to trigger AI autocompletion
+- Choose from various AI actions in the popup menu
+
+### Custom AI Commands
+- Select text and choose "Custom" from AI menu
+- Type natural language instructions
+- Example: "Make this more professional" or "Translate to Spanish"
+
+## 🏗️ Project Structure
 
 ```
-pnpm i
-pnpm dev
+novel_pro/
+├── apps/
+│   └── web/                 # Next.js web application
+│       ├── app/
+│       │   └── api/
+│       │       ├── generate/     # Main AI API endpoint
+│       │       └── debug-env/    # Environment debugging
+│       ├── components/      # React components
+│       └── styles/         # CSS and styling
+├── packages/
+│   └── headless/           # Core editor logic
+└── docs/                   # Documentation
 ```
 
-## Cross-framework support
+## 🔧 Development
 
-While Novel is built for React, we also have a few community-maintained packages for non-React frameworks:
+### Available Scripts
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm lint` - Run ESLint
+- `pnpm typecheck` - Run TypeScript checks
 
-- Svelte: https://novel.sh/svelte
-- Vue: https://novel.sh/vue
+### Key Features Implementation
+- **Multi-model AI**: Automatic fallback between different AI providers
+- **Error Handling**: Graceful degradation when AI services are unavailable
+- **Rate Limiting**: Built-in protection against API abuse
+- **Security**: API keys are server-side only, never exposed to client
 
-## VSCode Extension
+## 🚀 Deployment
 
-Thanks to @bennykok, Novel also has a VSCode Extension: https://novel.sh/vscode
+### Vercel (Recommended)
+1. Connect your GitHub repository to Vercel
+2. Add environment variables in Vercel dashboard
+3. Deploy automatically on push to main branch
 
-https://github.com/steven-tey/novel/assets/28986134/58ebf7e3-cdb3-43df-878b-119e304f7373
+### Other Platforms
+- Ensure Node.js 18+ support
+- Set environment variables
+- Build with `pnpm build`
+- Serve the `apps/web/.next` directory
 
-## Tech Stack
+## 🤝 Contributing
 
-Novel is built on the following stack:
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
-- [Next.js](https://nextjs.org/) – framework
-- [Tiptap](https://tiptap.dev/) – text editor
-- [OpenAI](https://openai.com/) - AI completions
-- [Vercel AI SDK](https://sdk.vercel.ai/docs) – AI library
-- [Vercel](https://vercel.com) – deployments
-- [TailwindCSS](https://tailwindcss.com/) – styles
-- [Cal Sans](https://github.com/calcom/font) – font
+## 📄 License
 
-## Contributing
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Here's how you can contribute:
+## 🙏 Acknowledgments
 
-- [Open an issue](https://github.com/steven-tey/novel/issues) if you believe you've encountered a bug.
-- Make a [pull request](https://github.com/steven-tey/novel/pull) to add new features/make quality-of-life improvements/fix bugs.
+- [Novel](https://github.com/steven-tey/novel) - Original project inspiration
+- [Tiptap](https://tiptap.dev/) - Excellent editor framework
+- [OpenRouter](https://openrouter.ai/) - AI model access platform
+- [Vercel](https://vercel.com/) - Deployment and infrastructure
 
-<a href="https://github.com/steven-tey/novel/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=steven-tey/novel" />
-</a>
+## 📞 Support
 
-## Repo Activity
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/youngfly93/novel_pro/issues)
+- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/youngfly93/novel_pro/discussions)
+- 📧 **Contact**: Create an issue for any questions
 
-![Novel.sh repo activity – generated by Axiom](https://repobeats.axiom.co/api/embed/2ebdaa143b0ad6e7c2ee23151da7b37f67da0b36.svg)
+---
 
-## License
-
-Licensed under the [Apache-2.0 license](https://github.com/steven-tey/novel/blob/main/LICENSE).
+**Made with ❤️ by [youngfly93](https://github.com/youngfly93)**

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(ss:*)",
+      "Bash(cat:*)",
+      "Bash(curl:*)",
+      "Bash(wsl.exe hostname:*)",
+      "Bash(ip route:*)",
+      "Bash(iptables:*)",
+      "Bash(sudo iptables:*)",
+      "Bash(lsof:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(hostname:*)"
+    ],
+    "deny": []
+  }
+}
