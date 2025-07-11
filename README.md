@@ -136,11 +136,15 @@ novel_pro/
 ├── apps/
 │   └── web/                 # Next.js web application
 │       ├── app/
-│       │   └── api/
-│       │       ├── generate/     # Main AI API endpoint
-│       │       └── debug-env/    # Environment debugging
+│       │   ├── api/
+│       │   │   ├── generate/     # Main AI API endpoint
+│       │   │   ├── test-api-key/ # API key validation
+│       │   │   └── debug-env/    # Environment debugging
+│       │   └── settings/         # API configuration page
 │       ├── components/      # React components
-│       └── styles/         # CSS and styling
+│       │   ├── api-key-manager.tsx
+│       │   └── tailwind/    # UI components
+│       └── hooks/          # Custom React hooks
 ├── packages/
 │   └── headless/           # Core editor logic
 └── docs/                   # Documentation
