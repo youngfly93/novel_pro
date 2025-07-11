@@ -32,7 +32,19 @@ const hljs = require("highlight.js");
 
 const extensions = [...defaultExtensions, slashCommand];
 
-const TailwindAdvancedEditor = () => {
+interface TailwindAdvancedEditorProps {
+  initialContent?: JSONContent | null;
+  onUpdate?: (content: JSONContent) => void;
+  pageTitle?: string;
+  darkMode?: boolean;
+}
+
+const TailwindAdvancedEditor = ({ 
+  initialContent: propInitialContent, 
+  onUpdate: propOnUpdate,
+  pageTitle,
+  darkMode = false
+}: TailwindAdvancedEditorProps = {}) => {
   const [initialContent, setInitialContent] = useState<null | JSONContent>(null);
   const [saveStatus, setSaveStatus] = useState("Saved");
   const [charsCount, setCharsCount] = useState();
@@ -56,25 +68,38 @@ const TailwindAdvancedEditor = () => {
   const debouncedUpdates = useDebouncedCallback(async (editor: EditorInstance) => {
     const json = editor.getJSON();
     setCharsCount(editor.storage.characterCount.words());
-    window.localStorage.setItem("html-content", highlightCodeblocks(editor.getHTML()));
-    window.localStorage.setItem("novel-content", JSON.stringify(json));
-    window.localStorage.setItem("markdown", editor.storage.markdown.getMarkdown());
+    
+    if (propOnUpdate) {
+      // Use custom update handler for page-specific content
+      propOnUpdate(json);
+    } else {
+      // Default behavior for main editor
+      window.localStorage.setItem("html-content", highlightCodeblocks(editor.getHTML()));
+      window.localStorage.setItem("novel-content", JSON.stringify(json));
+      window.localStorage.setItem("markdown", editor.storage.markdown.getMarkdown());
+    }
     setSaveStatus("Saved");
   }, 500);
 
   useEffect(() => {
-    const content = window.localStorage.getItem("novel-content");
-    if (content) setInitialContent(JSON.parse(content));
-    else setInitialContent(defaultEditorContent);
-  }, []);
+    if (propInitialContent !== undefined) {
+      // Use provided initial content
+      setInitialContent(propInitialContent || defaultEditorContent);
+    } else {
+      // Default behavior - load from localStorage
+      const content = window.localStorage.getItem("novel-content");
+      if (content) setInitialContent(JSON.parse(content));
+      else setInitialContent(defaultEditorContent);
+    }
+  }, [propInitialContent]);
 
   if (!initialContent) return null;
 
   return (
-    <div className="relative w-full max-w-screen-lg">
+    <div className={`relative w-full max-w-screen-lg ${darkMode ? 'dark' : ''}`}>
       <div className="flex absolute right-5 top-5 z-10 mb-5 gap-2">
-        <div className="rounded-lg bg-accent px-2 py-1 text-sm text-muted-foreground">{saveStatus}</div>
-        <div className={charsCount ? "rounded-lg bg-accent px-2 py-1 text-sm text-muted-foreground" : "hidden"}>
+        <div className={`rounded-lg px-2 py-1 text-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-accent text-muted-foreground'}`}>{saveStatus}</div>
+        <div className={charsCount ? `rounded-lg px-2 py-1 text-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-accent text-muted-foreground'}` : "hidden"}>
           {charsCount} Words
         </div>
       </div>
@@ -82,7 +107,11 @@ const TailwindAdvancedEditor = () => {
         <EditorContent
           initialContent={initialContent}
           extensions={extensions}
-          className="relative min-h-[500px] w-full max-w-screen-lg border-muted bg-background sm:mb-[calc(20vh)] sm:rounded-lg sm:border sm:shadow-lg"
+          className={`relative min-h-[500px] w-full max-w-screen-lg sm:mb-[calc(20vh)] sm:rounded-lg sm:shadow-lg ${
+            darkMode 
+              ? 'bg-gray-800 border-gray-600 text-white' 
+              : 'border-muted bg-background sm:border'
+          }`}
           editorProps={{
             handleDOMEvents: {
               keydown: (_view, event) => handleCommandNavigation(event),
@@ -90,8 +119,9 @@ const TailwindAdvancedEditor = () => {
             handlePaste: (view, event) => handleImagePaste(view, event, uploadFn),
             handleDrop: (view, event, _slice, moved) => handleImageDrop(view, event, moved, uploadFn),
             attributes: {
-              class:
-                "prose prose-lg dark:prose-invert prose-headings:font-title font-default focus:outline-none max-w-full",
+              class: darkMode 
+                ? "prose prose-lg prose-invert prose-headings:font-title font-default focus:outline-none max-w-full text-white"
+                : "prose prose-lg dark:prose-invert prose-headings:font-title font-default focus:outline-none max-w-full",
             },
           }}
           onUpdate={({ editor }) => {
