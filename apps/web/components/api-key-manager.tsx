@@ -55,6 +55,11 @@ export function ApiKeyManager() {
     if (saved) {
       try {
         const parsedConfig = JSON.parse(saved);
+        // Ensure baseUrl is set from provider if not present
+        const provider = PROVIDERS[parsedConfig.provider as keyof typeof PROVIDERS];
+        if (provider && !parsedConfig.baseUrl) {
+          parsedConfig.baseUrl = provider.baseUrl;
+        }
         setConfig(parsedConfig);
         setIsConfigured(!!parsedConfig.apiKey);
       } catch (error) {
@@ -110,8 +115,13 @@ export function ApiKeyManager() {
       const result = await response.json();
 
       if (result.success) {
-        // Save to localStorage
-        localStorage.setItem("novel-api-config", JSON.stringify(config));
+        // Save to localStorage with proper baseUrl
+        const configToSave = {
+          ...config,
+          baseUrl: config.baseUrl || provider.baseUrl
+        };
+        localStorage.setItem("novel-api-config", JSON.stringify(configToSave));
+        setConfig(configToSave);
         setIsConfigured(true);
         alert("API key configured successfully!");
       } else {

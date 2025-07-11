@@ -20,10 +20,13 @@ export function useApiConfig() {
       if (saved) {
         try {
           const parsedConfig = JSON.parse(saved);
+          console.log("Loaded API config from localStorage:", parsedConfig);
           setConfig(parsedConfig);
         } catch (error) {
           console.error("Failed to parse saved API config:", error);
         }
+      } else {
+        console.log("No API config found in localStorage");
       }
       setIsLoaded(true);
     }
@@ -44,7 +47,7 @@ export function useApiConfig() {
   };
 
   const hasValidConfig = () => {
-    return config && config.apiKey && config.baseUrl && config.model;
+    return config && config.apiKey && config.model && config.provider;
   };
 
   return {

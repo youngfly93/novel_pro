@@ -49,6 +49,7 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
 
   // Show API configuration prompt if not configured
   if (isLoaded && !hasValidConfig) {
+    console.log("AI Selector: No valid config found", { config, hasValidConfig, isLoaded });
     return (
       <Command className="w-[350px]">
         <div className="p-4 text-center space-y-3">
@@ -72,6 +73,8 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
       </Command>
     );
   }
+
+  console.log("AI Selector: Valid config found", { config, hasValidConfig, isLoaded });
 
   return (
     <Command className="w-[350px]">
