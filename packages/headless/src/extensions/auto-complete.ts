@@ -18,6 +18,7 @@ declare module "@tiptap/core" {
       setGhostText: (text: string) => ReturnType;
       clearGhostText: () => ReturnType;
       acceptGhostText: () => ReturnType;
+      updateSettings: () => ReturnType;
     };
   }
 }
@@ -29,14 +30,38 @@ export interface AutoCompleteOptions {
   onRequest?: (prompt: string, abortController: AbortController) => Promise<ReadableStream | null>;
 }
 
+// Helper function to load settings from localStorage
+const loadAutoCompleteSettings = () => {
+  try {
+    const saved = localStorage.getItem("novel-api-config");
+    if (saved) {
+      const config = JSON.parse(saved);
+      return {
+        delay: config.delay || 20,
+        minLength: config.minLength || 3,
+        maxTokens: config.maxTokens || 150,
+      };
+    }
+  } catch (error) {
+    console.error("Failed to load autocomplete settings:", error);
+  }
+  // Return defaults if loading fails
+  return {
+    delay: 20,
+    minLength: 3,
+    maxTokens: 150,
+  };
+};
+
 export const AutoComplete = Extension.create<AutoCompleteOptions>({
   name: "autoComplete",
 
   addOptions() {
+    const settings = loadAutoCompleteSettings();
     return {
-      delay: 100, // Very short delay for near-instant response
-      minLength: 3, // Even lower threshold for easier triggering
-      maxTokens: 50,
+      delay: settings.delay,
+      minLength: settings.minLength,
+      maxTokens: settings.maxTokens,
       onRequest: undefined,
     };
   },
@@ -73,6 +98,22 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           }
           return true;
         },
+
+      updateSettings:
+        () =>
+        ({ editor }) => {
+          // Reload settings from localStorage and update extension options
+          const newSettings = loadAutoCompleteSettings();
+          editor.extensionManager.extensions.forEach((extension) => {
+            if (extension.name === "autoComplete") {
+              extension.options = {
+                ...extension.options,
+                ...newSettings,
+              };
+            }
+          });
+          return true;
+        },
     };
   },
 
@@ -81,10 +122,11 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
     const options = this.options;
     let debounceTimer: NodeJS.Timeout | null = null;
     let activeRequestId: string | null = null;
+    let lastTriggerTime = 0;
     
-    // Simple cache for recent completions
+    // Enhanced cache for recent completions with larger size for better hit rate
     const completionCache = new Map<string, string>();
-    const MAX_CACHE_SIZE = 20;
+    const MAX_CACHE_SIZE = 50;
 
     const triggerCompletion = (view: EditorView) => {
       const { from } = view.state.selection;
@@ -92,38 +134,49 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
       console.log('🔍 triggerCompletion called:', { textBefore: textBefore.trim(), length: textBefore.trim().length, minLength: options.minLength });
 
-      // Check minimum length requirement
-      if (textBefore.trim().length < options.minLength) {
+      // Quick minimum length check
+      const trimmedText = textBefore.trim();
+      if (trimmedText.length < options.minLength) {
         console.log('❌ Text too short, skipping completion');
         return;
       }
 
-      // Don't trigger if we're in a code block or similar
+      // Quick code block check
       const $pos = view.state.selection.$from;
       if ($pos.parent.type.name === "codeBlock") {
         return;
       }
       
-      const prompt = textBefore.trim();
+      const prompt = trimmedText;
       
-      // Create more specific cache key based on recent content context
-      const lastWords = textBefore.split(/\s+/).slice(-6).join(' '); // Last 6 words for better context
-      const cacheKey = lastWords || prompt; // Fallback to full prompt if not enough words
+      // Multiple cache key strategies for better hit rate
+      const lastWords = textBefore.split(/\s+/).slice(-6).join(' ');
+      const last3Words = textBefore.split(/\s+/).slice(-3).join(' ');
+      const cacheKeys = [
+        lastWords || prompt,
+        last3Words || prompt,
+        prompt.slice(-20), // Last 20 characters
+        prompt
+      ];
       
-      // Check cache first for instant response  
-      const cachedCompletion = completionCache.get(cacheKey);
-      if (cachedCompletion) {
-        // Instantly show cached completion
-        view.dispatch(
-          view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
-            ghostText: cachedCompletion,
-            isLoading: false,
-            requestId: Date.now().toString(),
-          }),
-        );
-        return;
+      // Check multiple cache keys for instant response
+      for (const cacheKey of cacheKeys) {
+        const cachedCompletion = completionCache.get(cacheKey);
+        if (cachedCompletion) {
+          console.log('⚡ Cache hit for:', cacheKey);
+          // Instantly show cached completion
+          view.dispatch(
+            view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+              ghostText: cachedCompletion,
+              isLoading: false,
+              requestId: Date.now().toString(),
+            }),
+          );
+          return;
+        }
       }
       
+      console.log('🌐 Cache miss, requesting new completion');
       requestCompletion(view, prompt);
     };
 
@@ -173,11 +226,13 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             prompt: string;
             option: string;
             stream: boolean;
+            maxTokens?: number;
             apiConfig?: unknown;
           } = {
             prompt,
             option: "autocomplete",
             stream: true,
+            maxTokens: options.maxTokens,
           };
 
           if (apiConfig) {
@@ -546,6 +601,25 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               return false;
             }
 
+            // Add throttling to prevent too frequent requests
+            const now = Date.now();
+            const MIN_TRIGGER_INTERVAL = 500; // Minimum 500ms between triggers
+            
+            if (now - lastTriggerTime < MIN_TRIGGER_INTERVAL) {
+              console.log('🕒 Throttling: Too soon since last trigger');
+              // Still clear ghost text but don't trigger new completion
+              if (pluginState.ghostText) {
+                view.dispatch(
+                  view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                    ghostText: "",
+                    isLoading: false,
+                    requestId: Date.now().toString(),
+                  }),
+                );
+              }
+              return false;
+            }
+
             // Clear existing ghost text when user continues typing
             if (pluginState.ghostText) {
               console.log('🧹 Clearing ghost text on handleTextInput');
@@ -573,7 +647,42 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               clearTimeout(debounceTimer);
             }
 
-            // Set up debounced completion trigger
+            // For very fast response, try immediate completion for cache hits
+            // Then set up minimal delay for new requests
+            
+            // First, try immediate completion if we have cache
+            const { from } = view.state.selection;
+            const textBefore = view.state.doc.textBetween(Math.max(0, from - 100), from);
+            const trimmedText = textBefore.trim();
+            
+            if (trimmedText.length >= options.minLength) {
+              // Check cache immediately for instant response
+              const lastWords = textBefore.split(/\s+/).slice(-6).join(' ');
+              const last3Words = textBefore.split(/\s+/).slice(-3).join(' ');
+              const cacheKeys = [
+                lastWords || trimmedText,
+                last3Words || trimmedText,
+                trimmedText.slice(-20),
+                trimmedText
+              ];
+              
+              for (const cacheKey of cacheKeys) {
+                const cachedCompletion = completionCache.get(cacheKey);
+                if (cachedCompletion) {
+                  console.log('⚡ Instant cache hit in handleTextInput');
+                  view.dispatch(
+                    view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                      ghostText: cachedCompletion,
+                      isLoading: false,
+                      requestId: Date.now().toString(),
+                    }),
+                  );
+                  return false; // Exit early on cache hit
+                }
+              }
+            }
+            
+            // Set up longer delay for new requests to avoid spam
             debounceTimer = setTimeout(() => {
               // Check again if we're still not loading and not composing before triggering
               const currentState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
@@ -581,8 +690,9 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
                 return;
               }
 
+              lastTriggerTime = Date.now(); // Update last trigger time
               triggerCompletion(view);
-            }, options.delay);
+            }, options.delay * 5); // Use longer delay to reduce frequency
 
             return false;
           },
@@ -623,13 +733,14 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
                 }),
               );
               
-              // After IME ends, wait a bit then potentially trigger completion
+              // After IME ends, wait longer before triggering completion
+              // This prevents triggering on every Chinese character input
               setTimeout(() => {
                 const currentState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
                 if (!currentState.isComposing && !currentState.isLoading) {
                   triggerCompletion(view);
                 }
-              }, options.delay);
+              }, options.delay * 10); // Use much longer delay after IME input
               
               return false;
             },

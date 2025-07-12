@@ -8,6 +8,10 @@ interface ApiKeyConfig {
   baseUrl: string;
   model: string;
   provider: string;
+  // Autocomplete settings
+  maxTokens: number;
+  delay: number;
+  minLength: number;
 }
 
 const PROVIDERS = {
@@ -43,6 +47,10 @@ export function ApiKeyManager() {
     baseUrl: "",
     model: "",
     provider: "openrouter",
+    // Default autocomplete settings
+    maxTokens: 150,
+    delay: 20,
+    minLength: 3,
   });
   const [showKey, setShowKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +67,14 @@ export function ApiKeyManager() {
         if (provider && !parsedConfig.baseUrl) {
           parsedConfig.baseUrl = provider.baseUrl;
         }
-        setConfig(parsedConfig);
+        // Set default values for new autocomplete settings if not present
+        const configWithDefaults = {
+          maxTokens: 150,
+          delay: 20,
+          minLength: 3,
+          ...parsedConfig,
+        };
+        setConfig(configWithDefaults);
         setIsConfigured(!!parsedConfig.apiKey);
       } catch (error) {
         console.error("Failed to parse saved config:", error);
@@ -122,7 +137,7 @@ export function ApiKeyManager() {
         localStorage.setItem("novel-api-config", JSON.stringify(configToSave));
         setConfig(configToSave);
         setIsConfigured(true);
-        alert("API key configured successfully!");
+        alert("API key and autocomplete settings configured successfully! Changes will take effect when you reload the editor.");
       } else {
         alert(result.error || "Failed to validate API key");
       }
@@ -141,6 +156,10 @@ export function ApiKeyManager() {
       baseUrl: "",
       model: "",
       provider: "openrouter",
+      // Reset autocomplete settings to defaults
+      maxTokens: 150,
+      delay: 20,
+      minLength: 3,
     });
     setIsConfigured(false);
     alert("API configuration cleared");
@@ -245,6 +264,65 @@ export function ApiKeyManager() {
             disabled
             className="flex h-10 w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700 cursor-not-allowed"
           />
+        </div>
+
+        {/* Autocomplete Settings Section */}
+        <div className="border-t border-gray-200 pt-6 mt-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Autocomplete Settings</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Customize how the AI autocomplete behaves. Changes take effect when you reload the editor.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="maxTokens" className="text-sm font-medium text-gray-900">
+                Text Length (tokens)
+              </label>
+              <input
+                id="maxTokens"
+                type="number"
+                min="10"
+                max="500"
+                step="10"
+                value={config.maxTokens}
+                onChange={(e) => setConfig({ ...config, maxTokens: parseInt(e.target.value) || 150 })}
+                className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-600">Controls how much text to predict (10-500)</p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="delay" className="text-sm font-medium text-gray-900">
+                Delay (ms)
+              </label>
+              <input
+                id="delay"
+                type="number"
+                min="0"
+                max="2000"
+                step="10"
+                value={config.delay}
+                onChange={(e) => setConfig({ ...config, delay: parseInt(e.target.value) || 20 })}
+                className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-600">Delay before triggering autocomplete (0-2000ms)</p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="minLength" className="text-sm font-medium text-gray-900">
+                Min Characters
+              </label>
+              <input
+                id="minLength"
+                type="number"
+                min="1"
+                max="20"
+                value={config.minLength}
+                onChange={(e) => setConfig({ ...config, minLength: parseInt(e.target.value) || 3 })}
+                className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-600">Minimum characters before triggering (1-20)</p>
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-2">

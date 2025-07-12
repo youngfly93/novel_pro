@@ -161,10 +161,33 @@ const markdownExtension = MarkdownExtension.configure({
   transformCopiedText: false,
 });
 
+// Load autocomplete settings from localStorage with defaults
+const loadAutoCompleteSettings = () => {
+  if (typeof window === 'undefined') {
+    return { delay: 20, minLength: 3, maxTokens: 150 };
+  }
+  try {
+    const saved = localStorage.getItem("novel-api-config");
+    if (saved) {
+      const config = JSON.parse(saved);
+      return {
+        delay: config.delay || 20,
+        minLength: config.minLength || 3,
+        maxTokens: config.maxTokens || 150,
+      };
+    }
+  } catch (error) {
+    console.error("Failed to load autocomplete settings:", error);
+  }
+  return { delay: 20, minLength: 3, maxTokens: 150 };
+};
+
+const autoCompleteSettings = loadAutoCompleteSettings();
+
 const autoComplete = AutoComplete.configure({
-  delay: 100, // Very short delay for near-instant response
-  minLength: 3, // Even lower threshold for easier triggering
-  maxTokens: 50,
+  delay: autoCompleteSettings.delay,
+  minLength: autoCompleteSettings.minLength,
+  maxTokens: autoCompleteSettings.maxTokens,
 });
 
 export const defaultExtensions = [

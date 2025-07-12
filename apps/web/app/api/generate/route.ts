@@ -13,7 +13,7 @@ export const runtime = "edge";
 export async function POST(req: Request): Promise<Response> {
   try {
     const body = await req.json();
-    const { prompt, option, command, apiConfig, stream: streamRequested = false } = body;
+    const { prompt, option, command, apiConfig, maxTokens, stream: streamRequested = false } = body;
 
     // Use user-provided API config or fall back to environment variables
     let apiKey = OPENAI_API_KEY;
@@ -204,7 +204,7 @@ export async function POST(req: Request): Promise<Response> {
       const requestBody = {
         model: model,
         messages: messages,
-        max_tokens: option === "autocomplete" ? 50 : 200,
+        max_tokens: option === "autocomplete" ? (maxTokens || 150) : 200,
         temperature: 0.7,
         stream: streamRequested,
       };
