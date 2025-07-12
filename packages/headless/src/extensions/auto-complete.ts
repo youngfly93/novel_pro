@@ -7,6 +7,7 @@ interface AutoCompleteState {
   isLoading: boolean;
   abortController?: AbortController;
   requestId?: string;
+  isComposing?: boolean;
 }
 
 const AUTOCOMPLETE_PLUGIN_KEY = new PluginKey("autoComplete");
@@ -34,7 +35,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
   addOptions() {
     return {
       delay: 100, // Very short delay for near-instant response
-      minLength: 5, // Lower threshold for faster triggering
+      minLength: 3, // Even lower threshold for easier triggering
       maxTokens: 50,
       onRequest: undefined,
     };
@@ -89,8 +90,11 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       const { from } = view.state.selection;
       const textBefore = view.state.doc.textBetween(Math.max(0, from - 100), from);
 
+      console.log('🔍 triggerCompletion called:', { textBefore: textBefore.trim(), length: textBefore.trim().length, minLength: options.minLength });
+
       // Check minimum length requirement
       if (textBefore.trim().length < options.minLength) {
+        console.log('❌ Text too short, skipping completion');
         return;
       }
 
@@ -102,8 +106,12 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       
       const prompt = textBefore.trim();
       
-      // Check cache first for instant response
-      const cachedCompletion = completionCache.get(prompt);
+      // Create more specific cache key based on recent content context
+      const lastWords = textBefore.split(/\s+/).slice(-6).join(' '); // Last 6 words for better context
+      const cacheKey = lastWords || prompt; // Fallback to full prompt if not enough words
+      
+      // Check cache first for instant response  
+      const cachedCompletion = completionCache.get(cacheKey);
       if (cachedCompletion) {
         // Instantly show cached completion
         view.dispatch(
@@ -241,10 +249,33 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
                   // Only update if this is still the active request
                   if (activeRequestId === requestId) {
+                    // Clean up the accumulated text to remove any overlap with input
+                    let cleanedText = accumulatedText;
+                    
+                    // Remove the prompt from the beginning if it's duplicated
+                    const promptLower = prompt.toLowerCase();
+                    const cleanedLower = cleanedText.toLowerCase();
+                    
+                    if (cleanedLower.startsWith(promptLower)) {
+                      cleanedText = accumulatedText.substring(prompt.length);
+                    }
+                    
+                    // Also handle partial overlaps at word boundaries
+                    const promptWords = prompt.split(/\s+/);
+                    const lastPromptWord = promptWords[promptWords.length - 1]?.toLowerCase();
+                    
+                    if (lastPromptWord && cleanedText.toLowerCase().startsWith(lastPromptWord)) {
+                      // Find where the overlap ends
+                      const words = cleanedText.split(/\s+/);
+                      if (words[0]?.toLowerCase() === lastPromptWord) {
+                        cleanedText = cleanedText.substring(words[0].length).trimStart();
+                      }
+                    }
+
                     // Update ghost text in real-time, keep loading state until stream completes
                     view.dispatch(
                       view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
-                        ghostText: accumulatedText,
+                        ghostText: cleanedText,
                         isLoading: true, // Keep loading state until stream completes
                         requestId,
                       }),
@@ -257,9 +288,32 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
         } finally {
           reader.releaseLock();
           
-          // Cache the completion for instant future use
+          // Cache the completion for instant future use (use cleaned text)
           if (accumulatedText && prompt.length >= options.minLength) {
-            completionCache.set(prompt, accumulatedText);
+            // Apply cleaning logic to cached text too
+            let cachedText = accumulatedText;
+            
+            const promptLower = prompt.toLowerCase();
+            const cleanedLower = cachedText.toLowerCase();
+            
+            if (cleanedLower.startsWith(promptLower)) {
+              cachedText = accumulatedText.substring(prompt.length);
+            }
+            
+            const promptWords = prompt.split(/\s+/);
+            const lastPromptWord = promptWords[promptWords.length - 1]?.toLowerCase();
+            
+            if (lastPromptWord && cachedText.toLowerCase().startsWith(lastPromptWord)) {
+              const words = cachedText.split(/\s+/);
+              if (words[0]?.toLowerCase() === lastPromptWord) {
+                cachedText = cachedText.substring(words[0].length).trimStart();
+              }
+            }
+            
+            // Use the same cache key logic as retrieval
+            const lastWords = prompt.split(/\s+/).slice(-6).join(' ');
+            const cacheKey = lastWords || prompt; // Fallback to full prompt if not enough words
+            completionCache.set(cacheKey, cachedText);
             
             // Maintain cache size
             if (completionCache.size > MAX_CACHE_SIZE) {
@@ -279,9 +333,32 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           // Only finalize if this is still the active request
           if (activeRequestId === requestId) {
             if (accumulatedText) {
+              // Apply the same cleaning logic for final text
+              let finalCleanedText = accumulatedText;
+              
+              // Remove the prompt from the beginning if it's duplicated
+              const promptLower = prompt.toLowerCase();
+              const cleanedLower = finalCleanedText.toLowerCase();
+              
+              if (cleanedLower.startsWith(promptLower)) {
+                finalCleanedText = accumulatedText.substring(prompt.length);
+              }
+              
+              // Also handle partial overlaps at word boundaries
+              const promptWords = prompt.split(/\s+/);
+              const lastPromptWord = promptWords[promptWords.length - 1]?.toLowerCase();
+              
+              if (lastPromptWord && finalCleanedText.toLowerCase().startsWith(lastPromptWord)) {
+                // Find where the overlap ends
+                const words = finalCleanedText.split(/\s+/);
+                if (words[0]?.toLowerCase() === lastPromptWord) {
+                  finalCleanedText = finalCleanedText.substring(words[0].length).trimStart();
+                }
+              }
+
               view.dispatch(
                 view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
-                  ghostText: accumulatedText,
+                  ghostText: finalCleanedText,
                   isLoading: false, // Now we're done loading
                   requestId,
                 }),
@@ -319,7 +396,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
         state: {
           init(): AutoCompleteState {
-            return { ghostText: "", isLoading: false };
+            return { ghostText: "", isLoading: false, isComposing: false };
           },
 
           apply(tr, state: AutoCompleteState): AutoCompleteState {
@@ -353,9 +430,16 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           decorations(state) {
             const pluginState = AUTOCOMPLETE_PLUGIN_KEY.getState(state) as AutoCompleteState;
 
+            // Don't show ghost text if no text
             if (!pluginState?.ghostText) {
               return DecorationSet.empty;
             }
+
+            // Temporarily disable IME blocking to debug the stuck ghost text issue
+            // TODO: Re-enable with better logic after confirming ghost text updates work
+            // if (pluginState.isComposing) {
+            //   return DecorationSet.empty;
+            // }
 
             const { from } = state.selection;
 
@@ -363,8 +447,8 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               const ghostText = pluginState.ghostText;
 
               // Create a widget decoration to display the ghost text after the cursor
-              // Use a unique key to force recreation when text changes
-              const uniqueKey = `ghost-text-${ghostText.length}-${Date.now()}`;
+              // Use stable key to avoid unnecessary DOM recreation
+              const uniqueKey = `ghost-text-${from}-${ghostText.length}`;
               const widget = Decoration.widget(
                 from,
                 () => {
@@ -426,14 +510,45 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               }
             }
 
+            // Clear ghost text on content-changing keys, but handle IME input carefully
+            if (state?.ghostText && !state.isComposing) {
+              const isEditingKey = event.key === "Enter" || 
+                                  event.key === "Backspace" || 
+                                  event.key === "Delete";
+              
+              const isTypedChar = event.key.length === 1 && 
+                                 !event.ctrlKey && 
+                                 !event.metaKey &&
+                                 !event.altKey;
+              
+              // Clear on editing keys OR typed characters (when not composing)
+              if (isEditingKey || isTypedChar) {
+                console.log('🧹 Clearing ghost text on keydown:', event.key);
+                view.dispatch(
+                  view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                    ghostText: "",
+                    isLoading: false,
+                    requestId: Date.now().toString(),
+                  }),
+                );
+              }
+            }
+
             return false;
           },
 
           handleTextInput(view) {
             const pluginState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
 
-            // Clear existing ghost text immediately when user continues typing
-            if (pluginState.ghostText && !pluginState.isLoading) {
+            // Don't do anything if IME is composing (state managed by composition events)
+            if (pluginState.isComposing) {
+              console.log('🚫 Skipping handleTextInput during IME composition');
+              return false;
+            }
+
+            // Clear existing ghost text when user continues typing
+            if (pluginState.ghostText) {
+              console.log('🧹 Clearing ghost text on handleTextInput');
               view.dispatch(
                 view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
                   ghostText: "",
@@ -441,6 +556,11 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
                   requestId: Date.now().toString(),
                 }),
               );
+            }
+
+            // Clear any stale cache entries periodically to prevent stuck content
+            if (completionCache.size > MAX_CACHE_SIZE * 0.8) {
+              completionCache.clear();
             }
 
             // Don't trigger new completion if we're currently loading
@@ -455,9 +575,9 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
             // Set up debounced completion trigger
             debounceTimer = setTimeout(() => {
-              // Check again if we're still not loading before triggering
+              // Check again if we're still not loading and not composing before triggering
               const currentState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
-              if (currentState.isLoading) {
+              if (currentState.isLoading || currentState.isComposing) {
                 return;
               }
 
@@ -465,6 +585,54 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             }, options.delay);
 
             return false;
+          },
+
+          handleDOMEvents: {
+            // Handle input events more carefully
+            input(_view, _event) {
+              // Let handleTextInput handle this instead to avoid double clearing
+              return false;
+            },
+
+            compositionstart(view) {
+              // IME composition started (e.g., Chinese pinyin input)
+              console.log('🈲 IME composition started');
+              view.dispatch(
+                view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                  isComposing: true,
+                  ghostText: "", // Clear ghost text when IME starts
+                  isLoading: false,
+                }),
+              );
+              
+              // Clear any pending completion timers
+              if (debounceTimer) {
+                clearTimeout(debounceTimer);
+                debounceTimer = null;
+              }
+              
+              return false;
+            },
+
+            compositionend(view) {
+              // IME composition ended
+              console.log('✅ IME composition ended');
+              view.dispatch(
+                view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                  isComposing: false,
+                }),
+              );
+              
+              // After IME ends, wait a bit then potentially trigger completion
+              setTimeout(() => {
+                const currentState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
+                if (!currentState.isComposing && !currentState.isLoading) {
+                  triggerCompletion(view);
+                }
+              }, options.delay);
+              
+              return false;
+            },
           },
         },
       }),
