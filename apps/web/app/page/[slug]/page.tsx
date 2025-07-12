@@ -43,12 +43,18 @@ export default function DynamicPage() {
     const loadPageData = () => {
       const savedPages = localStorage.getItem("novel-pages");
       const pages = savedPages ? JSON.parse(savedPages) : {};
-      
+
       // Debug logging
       console.log("Loading page data for:", slug);
       console.log("All pages:", Object.keys(pages));
-      console.log("Parent pages:", Object.keys(pages).filter(key => !pages[key].isSubPage));
-      console.log("Sub pages:", Object.keys(pages).filter(key => pages[key].isSubPage));
+      console.log(
+        "Parent pages:",
+        Object.keys(pages).filter((key) => !pages[key].isSubPage),
+      );
+      console.log(
+        "Sub pages:",
+        Object.keys(pages).filter((key) => pages[key].isSubPage),
+      );
       console.log("Target page exists:", !!pages[slug]);
       if (pages[slug]) {
         console.log("Page data:", pages[slug]);
@@ -56,12 +62,12 @@ export default function DynamicPage() {
 
       if (pages[slug]) {
         const currentPageData = pages[slug];
-        
+
         // Note: Removed problematic data integrity check that was incorrectly modifying page relationships
-        
+
         setPageData(currentPageData);
         setTitle(currentPageData.title);
-        
+
         // Load parent page data if this is a sub page
         if (currentPageData.parentSlug && pages[currentPageData.parentSlug]) {
           setParentPage(pages[currentPageData.parentSlug]);
@@ -133,19 +139,18 @@ export default function DynamicPage() {
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-      
+
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col items-center gap-4 py-4 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <div
+        className={`flex-1 flex flex-col items-center gap-4 py-4 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : ""}`}
+      >
         {/* Header */}
-        <div className={`flex flex-col w-full max-w-4xl gap-2 sm:mb-[calc(10vh)] ${sidebarOpen ? 'px-4' : 'px-4 sm:px-5'}`}>
+        <div
+          className={`flex flex-col w-full max-w-4xl gap-2 sm:mb-[calc(10vh)] ${sidebarOpen ? "px-4" : "px-4 sm:px-5"}`}
+        >
           {/* Top row with menu and actions */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="gap-2"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)} className="gap-2">
               <Menu className="h-4 w-4" />
             </Button>
 
@@ -168,14 +173,14 @@ export default function DynamicPage() {
           {/* Breadcrumb navigation for sub pages */}
           {pageData?.isSubPage && parentPage && (
             <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-              <Link 
-                href={pageData.parentSlug ? `/page/${pageData.parentSlug}` : '/'}
+              <Link
+                href={pageData.parentSlug ? `/page/${pageData.parentSlug}` : "/"}
                 className="hover:text-gray-900 transition-colors"
               >
-                {parentPage.title || 'Untitled'}
+                {parentPage.title || "Untitled"}
               </Link>
               <ChevronRight className="h-4 w-4" />
-              <span className="text-gray-900">{title || 'Untitled'}</span>
+              <span className="text-gray-900">{title || "Untitled"}</span>
             </div>
           )}
 

@@ -43,8 +43,13 @@ export const suggestionItems = createSuggestionItems([
         })
         .run();
 
-      // Note: Editor content is handled by the editor's own save mechanism
-      // No need to force save here as it may cause race conditions
+      // Force save the current editor content to ensure page reference is persisted
+      // This prevents the page reference from being lost when navigating away quickly
+      setTimeout(() => {
+        // Trigger editor save by dispatching a manual save
+        const saveEvent = new CustomEvent("forceSave");
+        window.dispatchEvent(saveEvent);
+      }, 100);
 
       // Save page to localStorage
       const savedPages = localStorage.getItem("novel-pages");
@@ -52,7 +57,7 @@ export const suggestionItems = createSuggestionItems([
 
       // Get current page slug from URL to set as parent
       const currentPath = window.location.pathname;
-      const currentSlug = currentPath.startsWith('/page/') ? currentPath.split('/page/')[1] : null;
+      const currentSlug = currentPath.startsWith("/page/") ? currentPath.split("/page/")[1] : null;
 
       // Only mark as sub page if we have a valid parent (i.e., created from another page, not from home)
       const isSubPage = currentSlug !== null;
@@ -67,20 +72,21 @@ export const suggestionItems = createSuggestionItems([
       };
 
       localStorage.setItem("novel-pages", JSON.stringify(pages));
-      
+
       // Debug logging
       console.log("Created page:", {
         slug,
         currentPath,
         currentSlug,
         isSubPage,
-        pageData: pages[slug]
+        pageData: pages[slug],
       });
 
       // Navigate to the new page with sufficient delay to ensure data is saved
+      // Increased delay to ensure editor content is properly saved
       setTimeout(() => {
         window.location.href = `/page/${slug}`;
-      }, 300);
+      }, 800);
     },
   },
   {

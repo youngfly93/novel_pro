@@ -14,7 +14,7 @@ import {
   handleImageDrop,
   handleImagePaste,
 } from "novel";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { defaultExtensions } from "./extensions";
 import { ColorSelector } from "./selectors/color-selector";
@@ -22,6 +22,7 @@ import { LinkSelector } from "./selectors/link-selector";
 import { MathSelector } from "./selectors/math-selector";
 import { NodeSelector } from "./selectors/node-selector";
 import { Separator } from "./ui/separator";
+import { EnhancedDragHandle, DragHandleMenuComponent } from "./enhanced-drag-handle";
 
 import GenerativeMenuSwitch from "./generative/generative-menu-switch";
 import { uploadFn } from "./image-upload";
@@ -30,7 +31,11 @@ import { slashCommand, suggestionItems } from "./slash-command";
 
 const hljs = require("highlight.js");
 
-const extensions = [...defaultExtensions, slashCommand];
+// Remove GlobalDragHandle from defaultExtensions and add our custom one
+const extensionsWithoutDragHandle = defaultExtensions.filter(
+  (ext) => ext.name !== "globalDragHandle" && ext.name !== "GlobalDragHandle",
+);
+const extensions = [...extensionsWithoutDragHandle, slashCommand, EnhancedDragHandle];
 
 interface TailwindAdvancedEditorProps {
   initialContent?: JSONContent | null;
@@ -64,21 +69,43 @@ const TailwindAdvancedEditor = ({
     return new XMLSerializer().serializeToString(doc);
   };
 
-  const debouncedUpdates = useDebouncedCallback(async (editor: EditorInstance) => {
-    const json = editor.getJSON();
-    setCharsCount(editor.storage.characterCount.words());
+  const saveContent = useCallback(
+    async (editor: EditorInstance) => {
+      const json = editor.getJSON();
+      setCharsCount(editor.storage.characterCount.words());
 
-    if (propOnUpdate) {
-      // Use custom update handler for page-specific content
-      propOnUpdate(json);
-    } else {
-      // Default behavior for main editor
-      window.localStorage.setItem("html-content", highlightCodeblocks(editor.getHTML()));
-      window.localStorage.setItem("novel-content", JSON.stringify(json));
-      window.localStorage.setItem("markdown", editor.storage.markdown.getMarkdown());
-    }
-    setSaveStatus("Saved");
-  }, 500);
+      if (propOnUpdate) {
+        // Use custom update handler for page-specific content
+        propOnUpdate(json);
+      } else {
+        // Default behavior for main editor
+        window.localStorage.setItem("html-content", highlightCodeblocks(editor.getHTML()));
+        window.localStorage.setItem("novel-content", JSON.stringify(json));
+        window.localStorage.setItem("markdown", editor.storage.markdown.getMarkdown());
+      }
+      setSaveStatus("Saved");
+    },
+    [propOnUpdate],
+  );
+
+  const debouncedUpdates = useDebouncedCallback(saveContent, 500);
+
+  // Store editor instance ref for force save
+  const editorRef = useRef<EditorInstance | null>(null);
+
+  // Listen for force save events from page creation
+  useEffect(() => {
+    const handleForceSave = () => {
+      if (editorRef.current) {
+        saveContent(editorRef.current);
+      }
+    };
+
+    window.addEventListener("forceSave", handleForceSave);
+    return () => {
+      window.removeEventListener("forceSave", handleForceSave);
+    };
+  }, [saveContent]);
 
   useEffect(() => {
     if (propInitialContent !== undefined) {
@@ -143,10 +170,16 @@ const TailwindAdvancedEditor = ({
             },
           }}
           onUpdate={({ editor }) => {
+            editorRef.current = editor;
             debouncedUpdates(editor);
             setSaveStatus("Unsaved");
           }}
-          slotAfter={<ImageResizer />}
+          slotAfter={
+            <>
+              <ImageResizer />
+              {editorRef.current && <DragHandleMenuComponent editor={editorRef.current} />}
+            </>
+          }
         >
           <EditorCommand className="z-50 h-auto max-h-[330px] overflow-y-auto rounded-md border border-muted bg-background px-1 py-2 shadow-md transition-all">
             <EditorCommandEmpty className="px-2 text-muted-foreground">No results</EditorCommandEmpty>

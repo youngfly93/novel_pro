@@ -44,11 +44,11 @@ export default function PagesListPage() {
       // Generate a unique slug using timestamp
       const timestamp = Date.now();
       const slug = `untitled-${timestamp}`;
-      
+
       router.push(`/page/${slug}`);
     } catch (error) {
-      console.error('创建页面时出错:', error);
-      alert('创建页面失败，请重试');
+      console.error("创建页面时出错:", error);
+      alert("创建页面失败，请重试");
     }
   };
 
@@ -61,8 +61,8 @@ export default function PagesListPage() {
         localStorage.setItem("novel-pages", JSON.stringify(updatedPages));
         setPages(updatedPages);
       } catch (error) {
-        console.error('删除页面时出错:', error);
-        alert('删除页面失败，请重试');
+        console.error("删除页面时出错:", error);
+        alert("删除页面失败，请重试");
       }
     }
     // 如果用户取消，什么都不做
@@ -94,18 +94,13 @@ export default function PagesListPage() {
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-      
+
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : ""}`}>
         {/* Header */}
         <div className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className={`flex items-center gap-4 ${sidebarOpen ? 'px-4 py-4 max-w-none' : 'p-4 max-w-4xl mx-auto'}`}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="gap-2"
-            >
+          <div className={`flex items-center gap-4 ${sidebarOpen ? "px-4 py-4 max-w-none" : "p-4 max-w-4xl mx-auto"}`}>
+            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)} className="gap-2">
               <Menu className="h-4 w-4" />
             </Button>
 
@@ -118,57 +113,57 @@ export default function PagesListPage() {
           </div>
         </div>
 
-      {/* Content */}
-      <div className={`${sidebarOpen ? 'p-4' : 'p-4'}`}>
-        <div className={`${sidebarOpen ? 'max-w-none' : 'max-w-4xl mx-auto'}`}>
-          {pageEntries.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No pages yet</h3>
-              <p className="text-gray-600 mb-4">Create your first page to get started</p>
-              <Button onClick={createNewPage} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Create Page
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {pageEntries.map(([slug, page]) => (
-                <Card key={slug} className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">{page.title || "Untitled Page"}</CardTitle>
-                        <CardDescription className="text-sm">Updated {formatDate(page.updatedAt)}</CardDescription>
+        {/* Content */}
+        <div className={`${sidebarOpen ? "p-4" : "p-4"}`}>
+          <div className={`${sidebarOpen ? "max-w-none" : "max-w-4xl mx-auto"}`}>
+            {pageEntries.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No pages yet</h3>
+                <p className="text-gray-600 mb-4">Create your first page to get started</p>
+                <Button onClick={createNewPage} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Page
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {pageEntries.map(([slug, page]) => (
+                  <Card key={slug} className="hover:shadow-md transition-shadow cursor-pointer">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg truncate">{page.title || "Untitled Page"}</CardTitle>
+                          <CardDescription className="text-sm">Updated {formatDate(page.updatedAt)}</CardDescription>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            deletePage(slug);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          deletePage(slug);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Link href={`/page/${slug}`} className="block">
-                      <div className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
-                        <FileText className="h-4 w-4" />
-                        <span className="text-sm">Open page</span>
-                      </div>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                    </CardHeader>
+                    <CardContent>
+                      <Link href={`/page/${slug}`} className="block">
+                        <div className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
+                          <FileText className="h-4 w-4" />
+                          <span className="text-sm">Open page</span>
+                        </div>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

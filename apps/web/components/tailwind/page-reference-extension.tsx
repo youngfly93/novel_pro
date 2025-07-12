@@ -15,11 +15,19 @@ const PageReferenceComponent = ({ node, updateAttributes }: NodeViewProps) => {
   const { slug, title } = node.attrs as PageReferenceAttributes;
   const [currentTitle, setCurrentTitle] = React.useState(title);
 
-  // Listen for page title updates from localStorage
+  // Listen for page title updates and deletions from localStorage
   React.useEffect(() => {
-    const checkTitleUpdate = () => {
+    const checkPageStatus = () => {
       const savedPages = localStorage.getItem("novel-pages");
       const pages = savedPages ? JSON.parse(savedPages) : {};
+
+      // Check if the page has been deleted
+      if (!pages[slug]) {
+        // If the page was deleted, mark this reference as invalid
+        setCurrentTitle("[已删除的页面]");
+        updateAttributes({ title: "[已删除的页面]" });
+        return;
+      }
 
       // Only update existing pages, don't create new ones
       // Page creation should be handled by the actual page creation logic
@@ -30,10 +38,10 @@ const PageReferenceComponent = ({ node, updateAttributes }: NodeViewProps) => {
     };
 
     // Check for updates periodically
-    const interval = setInterval(checkTitleUpdate, 1000);
+    const interval = setInterval(checkPageStatus, 1000);
 
     // Also check when the page gains focus (user comes back from editing)
-    const handleFocus = () => checkTitleUpdate();
+    const handleFocus = () => checkPageStatus();
     window.addEventListener("focus", handleFocus);
 
     return () => {
@@ -43,6 +51,11 @@ const PageReferenceComponent = ({ node, updateAttributes }: NodeViewProps) => {
   }, [slug, currentTitle, updateAttributes]);
 
   const handleClick = () => {
+    // Don't allow clicking on deleted pages
+    if (currentTitle === "[已删除的页面]") {
+      alert("此页面已被删除");
+      return;
+    }
     window.open(`/page/${slug}`, "_blank");
   };
 
@@ -61,10 +74,16 @@ const PageReferenceComponent = ({ node, updateAttributes }: NodeViewProps) => {
     }
   };
 
+  const isDeleted = currentTitle === "[已删除的页面]";
+
   return (
     <NodeViewWrapper className="page-reference-wrapper">
       <div
-        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors my-1 mx-1 max-w-md"
+        className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors my-1 mx-1 max-w-md ${
+          isDeleted
+            ? "border-red-200 bg-red-50 text-red-600 cursor-not-allowed"
+            : "border-gray-200 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+        }`}
         onClick={handleClick}
         onKeyDown={(e: React.KeyboardEvent) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -75,18 +94,23 @@ const PageReferenceComponent = ({ node, updateAttributes }: NodeViewProps) => {
         role="button"
         tabIndex={0}
       >
-        <FileText className="h-4 w-4 text-gray-600 flex-shrink-0" />
+        <FileText className={`h-4 w-4 flex-shrink-0 ${isDeleted ? "text-red-400" : "text-gray-600"}`} />
         <span
-          className="text-sm font-medium text-gray-800 truncate"
-          contentEditable={true}
+          className={`text-sm font-medium truncate ${isDeleted ? "text-red-600" : "text-gray-800"}`}
+          contentEditable={!isDeleted}
           suppressContentEditableWarning={true}
           onBlur={(e: React.FocusEvent<HTMLSpanElement>) => {
+            if (isDeleted) return;
             const newTitle = e.target.textContent?.trim() || "Untitled";
             if (newTitle !== currentTitle) {
               handleTitleUpdate(newTitle);
             }
           }}
           onKeyDown={(e: React.KeyboardEvent<HTMLSpanElement>) => {
+            if (isDeleted) {
+              e.preventDefault();
+              return;
+            }
             if (e.key === "Enter") {
               e.preventDefault();
               (e.target as HTMLElement).blur();
@@ -95,7 +119,9 @@ const PageReferenceComponent = ({ node, updateAttributes }: NodeViewProps) => {
             e.stopPropagation();
           }}
           onClick={(e) => {
-            e.stopPropagation();
+            if (!isDeleted) {
+              e.stopPropagation();
+            }
           }}
         >
           {currentTitle || "Untitled"}

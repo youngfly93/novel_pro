@@ -28,7 +28,11 @@
       "Bash(pkill:*)",
       "Bash(true)",
       "Bash(pnpm turbo lint:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(node:*)",
+      "Bash(pnpm biome lint:*)",
+      "Bash(pnpm list:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }
