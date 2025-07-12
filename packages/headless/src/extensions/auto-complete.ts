@@ -33,8 +33,8 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
   addOptions() {
     return {
-      delay: 500,
-      minLength: 15,
+      delay: 600, // Slightly longer delay for better experience
+      minLength: 8, // Reasonable minimum length
       maxTokens: 50,
       onRequest: undefined,
     };
@@ -337,18 +337,13 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
                   const span = document.createElement("span");
                   span.className = "ghost-text";
                   span.style.cssText = `
-                  color: #ef4444 !important; 
+                  color: #9ca3af !important; 
                   pointer-events: none; 
                   font-style: normal; 
-                  font-weight: bold !important;
-                  opacity: 1 !important; 
-                  background: rgba(239, 68, 68, 0.1) !important; 
-                  padding: 2px 6px !important; 
-                  border-radius: 4px !important;
+                  font-weight: normal !important;
+                  opacity: 0.5 !important; 
                   user-select: none !important;
                   position: relative !important;
-                  z-index: 999 !important;
-                  border: 2px solid #ef4444 !important;
                   display: inline !important;
                   white-space: nowrap !important;
                   font-size: inherit !important;
