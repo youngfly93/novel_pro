@@ -31,11 +31,8 @@ import { slashCommand, suggestionItems } from "./slash-command";
 
 const hljs = require("highlight.js");
 
-// Remove GlobalDragHandle from defaultExtensions and add our custom one
-const extensionsWithoutDragHandle = defaultExtensions.filter(
-  (ext) => ext.name !== "globalDragHandle" && ext.name !== "GlobalDragHandle",
-);
-const extensions = [...extensionsWithoutDragHandle, slashCommand, EnhancedDragHandle];
+// Keep original GlobalDragHandle and add our enhanced version alongside
+const extensions = [...defaultExtensions, slashCommand, EnhancedDragHandle];
 
 interface TailwindAdvancedEditorProps {
   initialContent?: JSONContent | null;

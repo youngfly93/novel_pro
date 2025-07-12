@@ -148,155 +148,66 @@ export const DragHandleMenuComponent: React.FC<{ editor: Editor }> = ({ editor }
   );
 };
 
+// 这个扩展只为现有的拖拽手柄添加右键菜单功能，不创建新的拖拽手柄
 export const EnhancedDragHandle = Extension.create({
   name: "enhancedDragHandle",
 
   addProseMirrorPlugins() {
-    let dragHandleElement: HTMLElement | null = null;
-
-    const hideDragHandle = () => {
-      if (dragHandleElement) {
-        dragHandleElement.classList.add("hide");
-      }
-    };
-
-    const showDragHandle = () => {
-      if (dragHandleElement) {
-        dragHandleElement.classList.remove("hide");
-      }
-    };
-
     return [
       new Plugin({
         key: new PluginKey("enhancedDragHandle"),
         view(editorView) {
-          // 创建拖拽手柄元素
-          dragHandleElement = document.createElement("div");
-          dragHandleElement.className = "drag-handle hide";
-          dragHandleElement.draggable = true;
-          dragHandleElement.setAttribute("data-drag-handle", "");
-
-          // 添加右键点击事件
-          dragHandleElement.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-
-            // 找到当前鼠标悬停的节点位置
-            const coords = { left: e.clientX, top: e.clientY };
-            const posAtCoords = editorView.posAtCoords(coords);
-
-            if (!posAtCoords) return;
-
-            const $pos = editorView.state.doc.resolve(posAtCoords.pos);
-            let nodePos = posAtCoords.pos;
-
-            // 找到块级节点的位置
-            for (let i = $pos.depth; i > 0; i--) {
-              const node = $pos.node(i);
-              if (node.type.isBlock && node.type.name !== "doc") {
-                nodePos = $pos.before(i);
-                break;
-              }
-            }
-
-            if (setMenuState) {
-              setMenuState({
-                showMenu: true,
-                menuPos: { x: e.clientX, y: e.clientY },
-                nodePos: nodePos,
-              });
-            }
-          });
-
-          // 处理拖拽开始事件
-          dragHandleElement.addEventListener("dragstart", (event) => {
-            if (!editorView.editable) return;
-
-            // 找到鼠标位置对应的节点
-            const coords = { x: event.clientX + 50, y: event.clientY };
-            const element = document.elementFromPoint(coords.x, coords.y);
-
-            if (!element) return;
-
-            let node = element.closest("li, p, h1, h2, h3, h4, h5, h6, blockquote, div[data-type], pre");
-            if (!node || !editorView.dom.contains(node)) return;
-
-            const nodePos = editorView.posAtDOM(node, 0);
-            if (nodePos < 0) return;
-
-            // 选择要拖拽的节点
-            const nodeSelection = NodeSelection.create(editorView.state.doc, nodePos);
-            editorView.dispatch(editorView.state.tr.setSelection(nodeSelection));
-
-            const slice = editorView.state.selection.content();
-
-            // 设置拖拽数据
-            event.dataTransfer!.effectAllowed = "copyMove";
-            event.dataTransfer!.setDragImage(node, 0, 0);
-
-            // 设置拖拽状态
-            (editorView as any).dragging = { slice, move: event.ctrlKey };
-          });
-
-          // 监听鼠标移动事件来显示/隐藏拖拽手柄
-          const handleMouseMove = (event: MouseEvent) => {
+          // 监听全局右键点击事件
+          const handleContextMenu = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
 
-            // 如果鼠标在编辑器外，隐藏手柄
-            if (!editorView.dom.contains(target)) {
-              hideDragHandle();
-              return;
-            }
+            // 检查是否点击的是拖拽手柄
+            if (target.classList.contains("drag-handle") || target.hasAttribute("data-drag-handle")) {
+              event.preventDefault();
 
-            // 找到最近的可拖拽节点
-            const node = target.closest(
-              "li, p, h1, h2, h3, h4, h5, h6, blockquote, div[data-type], pre, [data-type='horizontalRule']",
-            );
+              // 找到鼠标位置附近的文档位置
+              const editorRect = editorView.dom.getBoundingClientRect();
+              const coords = {
+                left: event.clientX - editorRect.left,
+                top: event.clientY - editorRect.top,
+              };
 
-            if (!node || !editorView.dom.contains(node)) {
-              hideDragHandle();
-              return;
-            }
+              // 获取文档位置
+              const posAtCoords = editorView.posAtCoords({
+                left: event.clientX,
+                top: event.clientY,
+              });
 
-            const rect = node.getBoundingClientRect();
-            const editorRect = editorView.dom.getBoundingClientRect();
+              if (!posAtCoords) return;
 
-            // 更新拖拽手柄位置
-            if (dragHandleElement) {
-              dragHandleElement.style.left = `${rect.left - editorRect.left - 24}px`;
-              dragHandleElement.style.top = `${rect.top - editorRect.top + 2}px`;
-              showDragHandle();
-            }
-          };
+              const $pos = editorView.state.doc.resolve(posAtCoords.pos);
+              let nodePos = posAtCoords.pos;
 
-          // 监听鼠标离开事件
-          const handleMouseLeave = () => {
-            setTimeout(() => {
-              // 延迟隐藏，避免快速移动时闪烁
-              if (dragHandleElement && !dragHandleElement.matches(":hover")) {
-                hideDragHandle();
+              // 找到块级节点的位置
+              for (let i = $pos.depth; i > 0; i--) {
+                const node = $pos.node(i);
+                if (node.type.isBlock && node.type.name !== "doc") {
+                  nodePos = $pos.before(i);
+                  break;
+                }
               }
-            }, 100);
+
+              if (setMenuState) {
+                setMenuState({
+                  showMenu: true,
+                  menuPos: { x: event.clientX, y: event.clientY },
+                  nodePos: nodePos,
+                });
+              }
+            }
           };
 
-          // 添加事件监听器
-          editorView.dom.addEventListener("mousemove", handleMouseMove);
-          editorView.dom.addEventListener("mouseleave", handleMouseLeave);
-
-          // 将拖拽手柄添加到编辑器容器
-          const container = editorView.dom.parentNode as HTMLElement;
-          if (container) {
-            container.style.position = "relative";
-            container.appendChild(dragHandleElement);
-          }
+          // 添加全局右键监听器
+          document.addEventListener("contextmenu", handleContextMenu);
 
           return {
             destroy: () => {
-              editorView.dom.removeEventListener("mousemove", handleMouseMove);
-              editorView.dom.removeEventListener("mouseleave", handleMouseLeave);
-
-              if (dragHandleElement && dragHandleElement.parentNode) {
-                dragHandleElement.parentNode.removeChild(dragHandleElement);
-              }
+              document.removeEventListener("contextmenu", handleContextMenu);
             },
           };
         },
