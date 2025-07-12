@@ -30,8 +30,8 @@ export default function DynamicPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [parentPage, setParentPage] = useState<PageData | null>(null);
 
-  // Convert slug back to readable title
-  const formatTitle = (slug: string) => {
+  // Convert slug back to readable title (utility function, kept for future use)
+  const _formatTitle = (slug: string) => {
     return slug
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -47,6 +47,8 @@ export default function DynamicPage() {
       // Debug logging
       console.log("Loading page data for:", slug);
       console.log("All pages:", Object.keys(pages));
+      console.log("Parent pages:", Object.keys(pages).filter(key => !pages[key].isSubPage));
+      console.log("Sub pages:", Object.keys(pages).filter(key => pages[key].isSubPage));
       console.log("Target page exists:", !!pages[slug]);
       if (pages[slug]) {
         console.log("Page data:", pages[slug]);
@@ -55,26 +57,7 @@ export default function DynamicPage() {
       if (pages[slug]) {
         const currentPageData = pages[slug];
         
-        // Data integrity check: if page was created from another page but lacks parent info,
-        // try to restore it from URL context
-        const urlParts = window.location.pathname.split('/');
-        const isFromPageReference = document.referrer.includes('/page/') && !currentPageData.parentSlug;
-        
-        if (isFromPageReference) {
-          console.warn('Page missing parent relationship, checking referrer...');
-          const referrerPath = new URL(document.referrer).pathname;
-          if (referrerPath.startsWith('/page/')) {
-            const possibleParentSlug = referrerPath.split('/page/')[1];
-            if (possibleParentSlug && pages[possibleParentSlug]) {
-              console.log('Restoring parent relationship:', possibleParentSlug);
-              currentPageData.parentSlug = possibleParentSlug;
-              currentPageData.isSubPage = true;
-              // Save the corrected data
-              pages[slug] = currentPageData;
-              localStorage.setItem("novel-pages", JSON.stringify(pages));
-            }
-          }
-        }
+        // Note: Removed problematic data integrity check that was incorrectly modifying page relationships
         
         setPageData(currentPageData);
         setTitle(currentPageData.title);

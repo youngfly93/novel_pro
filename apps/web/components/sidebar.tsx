@@ -99,10 +99,30 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     return false;
   };
 
-  // Filter to show only parent pages (not sub pages created via /page command)
-  const pageEntries = Object.entries(pages)
-    .filter(([, page]) => !page.isSubPage) // Only show parent pages
+  // Organize pages into hierarchy
+  const allPageEntries = Object.entries(pages);
+  
+  // Get parent pages
+  const parentPages = allPageEntries
+    .filter(([, page]) => !page.isSubPage)
     .sort(([, a], [, b]) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  
+  // Get sub pages grouped by parent
+  const subPagesByParent = allPageEntries
+    .filter(([, page]) => page.isSubPage && page.parentSlug)
+    .reduce((acc, [slug, page]) => {
+      const parentSlug = page.parentSlug!;
+      if (!acc[parentSlug]) acc[parentSlug] = [];
+      acc[parentSlug].push([slug, page]);
+      return acc;
+    }, {} as Record<string, [string, PageData][]>);
+  
+  // Sort sub pages by update time
+  Object.keys(subPagesByParent).forEach(parentSlug => {
+    subPagesByParent[parentSlug].sort(([, a], [, b]) => 
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  });
 
   return (
     <>
@@ -153,30 +173,61 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             </Button>
           </Link>
 
-          {/* Main Pages */}
+          {/* Main Pages with Hierarchy */}
           <div className="space-y-1">
-            {pageEntries.map(([slug, page]) => (
-              <div
-                key={slug}
-                className="group flex items-center justify-between"
-              >
-                <Link href={`/page/${slug}`} className="flex-1">
+            {parentPages.map(([slug, page]) => (
+              <div key={slug} className="space-y-1">
+                {/* Parent Page */}
+                <div className="group flex items-center justify-between">
+                  <Link href={`/page/${slug}`} className="flex-1">
+                    <Button
+                      variant={isCurrentPage(`/page/${slug}`) ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-3"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate">{page.title || '无标题'}</span>
+                    </Button>
+                  </Link>
                   <Button
-                    variant={isCurrentPage(`/page/${slug}`) ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3"
+                    variant="ghost"
+                    size="sm"
+                    className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                    onClick={(e) => deletePage(slug, e)}
                   >
-                    <FileText className="h-4 w-4" />
-                    <span className="truncate">{page.title || '无标题'}</span>
+                    <X className="h-4 w-4" />
                   </Button>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 text-red-500 hover:text-red-700"
-                  onClick={(e) => deletePage(slug, e)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                </div>
+                
+                {/* Sub Pages */}
+                {subPagesByParent[slug] && (
+                  <div className="ml-6 space-y-1">
+                    {subPagesByParent[slug].map(([subSlug, subPage]) => (
+                      <div
+                        key={subSlug}
+                        className="group flex items-center justify-between"
+                      >
+                        <Link href={`/page/${subSlug}`} className="flex-1">
+                          <Button
+                            variant={isCurrentPage(`/page/${subSlug}`) ? "secondary" : "ghost"}
+                            className="w-full justify-start gap-3 text-sm"
+                            size="sm"
+                          >
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate">{subPage.title || '无标题'}</span>
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                          onClick={(e) => deletePage(subSlug, e)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             
