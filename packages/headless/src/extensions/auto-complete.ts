@@ -33,8 +33,8 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
   addOptions() {
     return {
-      delay: 600, // Slightly longer delay for better experience
-      minLength: 8, // Reasonable minimum length
+      delay: 100, // Very short delay for near-instant response
+      minLength: 5, // Lower threshold for faster triggering
       maxTokens: 50,
       onRequest: undefined,
     };
@@ -80,6 +80,10 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
     const options = this.options;
     let debounceTimer: NodeJS.Timeout | null = null;
     let activeRequestId: string | null = null;
+    
+    // Simple cache for recent completions
+    const completionCache = new Map<string, string>();
+    const MAX_CACHE_SIZE = 20;
 
     const triggerCompletion = (view: EditorView) => {
       const { from } = view.state.selection;
@@ -95,7 +99,24 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       if ($pos.parent.type.name === "codeBlock") {
         return;
       }
-      requestCompletion(view, textBefore.trim());
+      
+      const prompt = textBefore.trim();
+      
+      // Check cache first for instant response
+      const cachedCompletion = completionCache.get(prompt);
+      if (cachedCompletion) {
+        // Instantly show cached completion
+        view.dispatch(
+          view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+            ghostText: cachedCompletion,
+            isLoading: false,
+            requestId: Date.now().toString(),
+          }),
+        );
+        return;
+      }
+      
+      requestCompletion(view, prompt);
     };
 
     const requestCompletion = async (view: EditorView, prompt: string) => {
@@ -135,7 +156,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             if (savedConfig) {
               apiConfig = JSON.parse(savedConfig);
             }
-          } catch (e) {
+          } catch (_e) {
             // Ignore localStorage errors
           }
 
@@ -199,14 +220,14 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
                     continue;
                   }
                   dataToProcess = JSON.parse(jsonStr);
-                } catch (e) {
+                } catch (_e) {
                   continue;
                 }
               } else if (line.trim()?.startsWith("{")) {
                 // Direct JSON format (OpenRouter stream)
                 try {
                   dataToProcess = JSON.parse(line.trim());
-                } catch (e) {
+                } catch (_e) {
                   continue;
                 }
               } else if (line.trim()) {
@@ -235,6 +256,19 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           }
         } finally {
           reader.releaseLock();
+          
+          // Cache the completion for instant future use
+          if (accumulatedText && prompt.length >= options.minLength) {
+            completionCache.set(prompt, accumulatedText);
+            
+            // Maintain cache size
+            if (completionCache.size > MAX_CACHE_SIZE) {
+              const firstKey = completionCache.keys().next().value;
+              if (firstKey) {
+                completionCache.delete(firstKey);
+              }
+            }
+          }
 
           // Cancel any pending debounce timers to prevent them from clearing our ghost text
           if (debounceTimer) {
@@ -266,7 +300,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             activeRequestId = null;
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // Silently handle errors except abort errors
 
         // Clear loading state on error
@@ -363,7 +397,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               );
 
               return DecorationSet.create(state.doc, [widget]);
-            } catch (error) {
+            } catch (_error) {
               return DecorationSet.empty;
             }
           },

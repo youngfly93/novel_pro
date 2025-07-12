@@ -162,8 +162,8 @@ const markdownExtension = MarkdownExtension.configure({
 });
 
 const autoComplete = AutoComplete.configure({
-  delay: 600, // Slightly longer delay for better experience
-  minLength: 8, // Reasonable minimum length  
+  delay: 100, // Very short delay for near-instant response
+  minLength: 5, // Lower threshold for faster triggering
   maxTokens: 50,
 });
 
