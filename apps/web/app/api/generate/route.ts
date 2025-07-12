@@ -13,7 +13,7 @@ export const runtime = "edge";
 export async function POST(req: Request): Promise<Response> {
   try {
     const body = await req.json();
-    const { prompt, option, command, apiConfig } = body;
+    const { prompt, option, command, apiConfig, stream: streamRequested = false } = body;
 
     // Use user-provided API config or fall back to environment variables
     let apiKey = OPENAI_API_KEY;
@@ -165,6 +165,21 @@ export async function POST(req: Request): Promise<Response> {
           content: `For this text: ${prompt}. You have to respect the command: ${command}`,
         },
       ])
+      .with("autocomplete", () => [
+        {
+          role: "system",
+          content:
+            "IMPORTANT: Only output the text completion. Do not add any explanations, commentary, or additional information. " +
+            "You are an AI writing assistant that completes text based on context. " +
+            "Continue the text naturally and smoothly. " +
+            "Limit your response to no more than 50 characters to keep it concise. " +
+            "Use Markdown formatting when appropriate.",
+        },
+        {
+          role: "user",
+          content: `Continue this text: ${prompt}`,
+        },
+      ])
       .run();
 
     // Debug: Log the actual API key being used
@@ -189,9 +204,9 @@ export async function POST(req: Request): Promise<Response> {
       const requestBody = {
         model: model,
         messages: messages,
-        max_tokens: 200,
+        max_tokens: option === "autocomplete" ? 50 : 200,
         temperature: 0.7,
-        stream: false,
+        stream: streamRequested,
       };
 
       try {
@@ -208,6 +223,20 @@ export async function POST(req: Request): Promise<Response> {
 
         if (response.ok) {
           console.log(`Success with model: ${model}`);
+
+          // If streaming is requested, return the stream directly
+          if (streamRequested) {
+            return new Response(response.body, {
+              status: 200,
+              headers: {
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache",
+                Connection: "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+              },
+            });
+          }
+
           break;
         } else {
           const errorData = await response.json();

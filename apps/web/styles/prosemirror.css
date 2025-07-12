@@ -17,6 +17,15 @@
   height: 0;
 }
 
+/* Ghost text for AI autocomplete */
+.ProseMirror .ghost-text {
+  color: #9ca3af;
+  font-style: italic;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.7;
+}
+
 /* Custom image styles */
 
 .ProseMirror img {

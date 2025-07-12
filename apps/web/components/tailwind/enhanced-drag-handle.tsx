@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { Editor, Extension } from "@tiptap/core";
+import type React from "react";
+import { useState, useEffect } from "react";
+import { type Editor, Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { NodeSelection } from "@tiptap/pm/state";
 import { Trash2, Type, List, Code, Quote, Minus, Hash } from "lucide-react";
 
 interface DragHandleMenuProps {
@@ -106,7 +106,7 @@ interface DragHandleState {
   nodePos: number;
 }
 
-let dragHandleMenuState: DragHandleState = {
+const dragHandleMenuState: DragHandleState = {
   showMenu: false,
   menuPos: { x: 0, y: 0 },
   nodePos: 0,

@@ -19,6 +19,7 @@ export {
   AIHighlight,
   removeAIHighlight,
   addAIHighlight,
+  AutoComplete,
   CodeBlockLowlight,
   HorizontalRule,
   ImageResizer,

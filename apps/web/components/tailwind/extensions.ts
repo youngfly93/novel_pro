@@ -1,5 +1,6 @@
 import {
   AIHighlight,
+  AutoComplete,
   CharacterCount,
   CodeBlockLowlight,
   Color,
@@ -160,6 +161,12 @@ const markdownExtension = MarkdownExtension.configure({
   transformCopiedText: false,
 });
 
+const autoComplete = AutoComplete.configure({
+  delay: 500,
+  minLength: 5, // Reduced for easier triggering
+  maxTokens: 50,
+});
+
 export const defaultExtensions = [
   starterKit,
   placeholder,
@@ -183,4 +190,5 @@ export const defaultExtensions = [
   CustomKeymap,
   GlobalDragHandle,
   PageReference,
+  autoComplete,
 ];

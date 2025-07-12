@@ -47,8 +47,6 @@ const TailwindAdvancedEditor = ({
   darkMode = false,
 }: TailwindAdvancedEditorProps = {}) => {
   const [initialContent, setInitialContent] = useState<null | JSONContent>(null);
-  const [saveStatus, setSaveStatus] = useState("Saved");
-  const [charsCount, setCharsCount] = useState();
 
   const [openNode, setOpenNode] = useState(false);
   const [openColor, setOpenColor] = useState(false);
@@ -69,7 +67,6 @@ const TailwindAdvancedEditor = ({
   const saveContent = useCallback(
     async (editor: EditorInstance) => {
       const json = editor.getJSON();
-      setCharsCount(editor.storage.characterCount.words());
 
       if (propOnUpdate) {
         // Use custom update handler for page-specific content
@@ -80,7 +77,6 @@ const TailwindAdvancedEditor = ({
         window.localStorage.setItem("novel-content", JSON.stringify(json));
         window.localStorage.setItem("markdown", editor.storage.markdown.getMarkdown());
       }
-      setSaveStatus("Saved");
     },
     [propOnUpdate],
   );
@@ -133,22 +129,6 @@ const TailwindAdvancedEditor = ({
 
   return (
     <div className={`relative w-full ${darkMode ? "dark" : ""}`}>
-      <div className="flex absolute right-8 top-8 z-10 mb-5 gap-2">
-        <div
-          className={`rounded-lg px-2 py-1 text-sm ${darkMode ? "bg-gray-700 text-gray-300" : "bg-accent text-muted-foreground"}`}
-        >
-          {saveStatus}
-        </div>
-        <div
-          className={
-            charsCount
-              ? `rounded-lg px-2 py-1 text-sm ${darkMode ? "bg-gray-700 text-gray-300" : "bg-accent text-muted-foreground"}`
-              : "hidden"
-          }
-        >
-          {charsCount} Words
-        </div>
-      </div>
       <EditorRoot>
         <EditorContent
           initialContent={initialContent}
@@ -169,7 +149,6 @@ const TailwindAdvancedEditor = ({
           onUpdate={({ editor }) => {
             editorRef.current = editor;
             debouncedUpdates(editor);
-            setSaveStatus("Unsaved");
           }}
           slotAfter={
             <>

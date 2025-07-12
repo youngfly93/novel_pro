@@ -32,7 +32,11 @@
       "Bash(node:*)",
       "Bash(pnpm biome lint:*)",
       "Bash(pnpm list:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm format:*)",
+      "Bash(npx biome format:*)",
+      "Bash(pnpm -F novel format --write src)"
     ],
     "deny": []
   }
