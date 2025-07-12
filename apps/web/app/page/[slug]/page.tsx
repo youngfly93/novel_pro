@@ -145,9 +145,7 @@ export default function DynamicPage() {
         className={`flex-1 flex flex-col items-center gap-4 py-4 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : ""}`}
       >
         {/* Header */}
-        <div
-          className={`flex flex-col w-full max-w-4xl gap-2 sm:mb-[calc(10vh)] ${sidebarOpen ? "px-4" : "px-4 sm:px-5"}`}
-        >
+        <div className={`flex flex-col w-full max-w-4xl gap-4 mb-8 ${sidebarOpen ? "px-4" : "px-4 sm:px-5"}`}>
           {/* Top row with menu and actions */}
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)} className="gap-2">
@@ -184,14 +182,16 @@ export default function DynamicPage() {
             </div>
           )}
 
-          {/* Title input */}
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            className="text-2xl font-semibold bg-transparent border-none outline-none w-full placeholder-gray-400"
-            placeholder="Untitled Page"
-          />
+          {/* Title input - centered */}
+          <div className="flex justify-center w-full py-4">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              className="text-3xl font-bold bg-transparent border-none outline-none text-center placeholder-gray-400 max-w-2xl w-full"
+              placeholder="Untitled Page"
+            />
+          </div>
         </div>
 
         {/* Editor */}
