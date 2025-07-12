@@ -55,13 +55,16 @@ export const suggestionItems = createSuggestionItems([
       const currentPath = window.location.pathname;
       const currentSlug = currentPath.startsWith('/page/') ? currentPath.split('/page/')[1] : null;
 
+      // Only mark as sub page if we have a valid parent (i.e., created from another page, not from home)
+      const isSubPage = currentSlug !== null;
+
       pages[slug] = {
         title: "Untitled",
         content: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        parentSlug: currentSlug, // Track parent page
-        isSubPage: true, // Mark as sub page
+        ...(isSubPage && { parentSlug: currentSlug }), // Only add parentSlug if it's a sub page
+        ...(isSubPage && { isSubPage: true }), // Only mark as sub page if we have a parent
       };
 
       localStorage.setItem("novel-pages", JSON.stringify(pages));
