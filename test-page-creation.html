@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Page Creation Issue Test</title>
+</head>
+<body>
+    <h1>Page Creation Issue Reproduction Test</h1>
+    <button onclick="simulatePageCreation()">Simulate Page Creation</button>
+    <button onclick="simulatePageReferenceCheck()">Simulate PageReference Check</button>
+    <button onclick="checkLocalStorageState()">Check localStorage State</button>
+    <div id="output"></div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += '<p>' + message + '</p>';
+        }
+
+        function simulatePageCreation() {
+            log('=== Simulating Page Creation ===');
+            
+            // Clear previous state
+            localStorage.removeItem('novel-pages');
+            
+            // Step 1: Create parent page (simulate being on /page/parent-123)
+            const parentSlug = 'parent-123';
+            const pages = {};
+            
+            pages[parentSlug] = {
+                title: "Parent Page",
+                content: null,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem('novel-pages', JSON.stringify(pages));
+            log('✓ Created parent page: ' + parentSlug);
+            
+            // Step 2: Simulate /page command execution (from parent page)
+            const pageId = `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const childSlug = pageId;
+            
+            // This simulates the logic in slash-command.tsx lines 51-70
+            const savedPages = localStorage.getItem("novel-pages");
+            const pagesData = savedPages ? JSON.parse(savedPages) : {};
+            
+            // Simulate current page context (we're on parent page)
+            const currentSlug = parentSlug; // This would come from window.location.pathname
+            const isSubPage = currentSlug !== null;
+            
+            pagesData[childSlug] = {
+                title: "Untitled",
+                content: null,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                ...(isSubPage && { parentSlug: currentSlug }),
+                ...(isSubPage && { isSubPage: true }),
+            };
+            
+            localStorage.setItem("novel-pages", JSON.stringify(pagesData));
+            log('✓ Created child page with parentSlug: ' + JSON.stringify(pagesData[childSlug]));
+            
+            // Step 3: Simulate page navigation (would happen after 100ms)
+            log('✓ Page creation complete. Child page has parentSlug: ' + pagesData[childSlug].parentSlug);
+            
+            return { parentSlug, childSlug };
+        }
+
+        function simulatePageReferenceCheck() {
+            log('=== Simulating PageReference Check ===');
+            
+            // Get current localStorage state
+            const savedPages = localStorage.getItem("novel-pages");
+            const pages = savedPages ? JSON.parse(savedPages) : {};
+            
+            // Find a child page to test
+            const childPages = Object.entries(pages).filter(([, page]) => page.isSubPage);
+            
+            if (childPages.length === 0) {
+                log('❌ No child pages found. Run page creation first.');
+                return;
+            }
+            
+            const [childSlug, childPage] = childPages[0];
+            log('Testing PageReference check for: ' + childSlug);
+            log('Before check - has parentSlug: ' + !!childPage.parentSlug);
+            
+            // This simulates the problematic logic in page-reference-extension.tsx lines 24-32
+            // Let's say the page was "not found" (simulating the race condition)
+            delete pages[childSlug]; // Simulate the page being "missing"
+            
+            // Now simulate the PageReference component's checkTitleUpdate function
+            const currentTitle = "Untitled";
+            
+            if (!pages[childSlug]) {
+                log('⚠️  PageReference thinks page doesn\'t exist, creating new one...');
+                pages[childSlug] = {
+                    title: currentTitle || "Untitled",
+                    content: null,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    // ❌ Notice: parentSlug and isSubPage are missing!
+                };
+                localStorage.setItem("novel-pages", JSON.stringify(pages));
+                log('❌ PageReference overwrote page data! Lost parentSlug and isSubPage');
+            }
+            
+            log('After check - has parentSlug: ' + !!pages[childSlug].parentSlug);
+            log('After check - isSubPage: ' + !!pages[childSlug].isSubPage);
+        }
+
+        function checkLocalStorageState() {
+            log('=== Current localStorage State ===');
+            
+            const savedPages = localStorage.getItem("novel-pages");
+            const pages = savedPages ? JSON.parse(savedPages) : {};
+            
+            log('Total pages: ' + Object.keys(pages).length);
+            
+            Object.entries(pages).forEach(([slug, page]) => {
+                log(`Page ${slug}:`);
+                log(`  - Title: ${page.title}`);
+                log(`  - Parent: ${page.parentSlug || 'none'}`);
+                log(`  - IsSubPage: ${page.isSubPage || false}`);
+                log(`  - Content: ${page.content ? 'has content' : 'no content'}`);
+            });
+            
+            // Check what would be shown in sidebar
+            const parentPages = Object.entries(pages).filter(([, page]) => !page.isSubPage);
+            log('Pages shown in sidebar: ' + parentPages.length);
+            parentPages.forEach(([slug, page]) => {
+                log(`  - ${page.title} (${slug})`);
+            });
+        }
+    </script>
+</body>
+</html>

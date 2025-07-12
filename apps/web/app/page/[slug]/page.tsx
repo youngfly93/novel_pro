@@ -43,9 +43,39 @@ export default function DynamicPage() {
     const loadPageData = () => {
       const savedPages = localStorage.getItem("novel-pages");
       const pages = savedPages ? JSON.parse(savedPages) : {};
+      
+      // Debug logging
+      console.log("Loading page data for:", slug);
+      console.log("All pages:", Object.keys(pages));
+      console.log("Target page exists:", !!pages[slug]);
+      if (pages[slug]) {
+        console.log("Page data:", pages[slug]);
+      }
 
       if (pages[slug]) {
         const currentPageData = pages[slug];
+        
+        // Data integrity check: if page was created from another page but lacks parent info,
+        // try to restore it from URL context
+        const urlParts = window.location.pathname.split('/');
+        const isFromPageReference = document.referrer.includes('/page/') && !currentPageData.parentSlug;
+        
+        if (isFromPageReference) {
+          console.warn('Page missing parent relationship, checking referrer...');
+          const referrerPath = new URL(document.referrer).pathname;
+          if (referrerPath.startsWith('/page/')) {
+            const possibleParentSlug = referrerPath.split('/page/')[1];
+            if (possibleParentSlug && pages[possibleParentSlug]) {
+              console.log('Restoring parent relationship:', possibleParentSlug);
+              currentPageData.parentSlug = possibleParentSlug;
+              currentPageData.isSubPage = true;
+              // Save the corrected data
+              pages[slug] = currentPageData;
+              localStorage.setItem("novel-pages", JSON.stringify(pages));
+            }
+          }
+        }
+        
         setPageData(currentPageData);
         setTitle(currentPageData.title);
         

@@ -43,9 +43,8 @@ export const suggestionItems = createSuggestionItems([
         })
         .run();
 
-      // Force immediate save of editor content to prevent race condition
-      const json = editor.getJSON();
-      window.localStorage.setItem("novel-content", JSON.stringify(json));
+      // Note: Editor content is handled by the editor's own save mechanism
+      // No need to force save here as it may cause race conditions
 
       // Save page to localStorage
       const savedPages = localStorage.getItem("novel-pages");
@@ -68,11 +67,20 @@ export const suggestionItems = createSuggestionItems([
       };
 
       localStorage.setItem("novel-pages", JSON.stringify(pages));
+      
+      // Debug logging
+      console.log("Created page:", {
+        slug,
+        currentPath,
+        currentSlug,
+        isSubPage,
+        pageData: pages[slug]
+      });
 
-      // Navigate to the new page
+      // Navigate to the new page with sufficient delay to ensure data is saved
       setTimeout(() => {
         window.location.href = `/page/${slug}`;
-      }, 100);
+      }, 300);
     },
   },
   {

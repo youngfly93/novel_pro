@@ -21,20 +21,12 @@ const PageReferenceComponent = ({ node, updateAttributes }: NodeViewProps) => {
       const savedPages = localStorage.getItem("novel-pages");
       const pages = savedPages ? JSON.parse(savedPages) : {};
 
-      // If page data doesn't exist, create it
-      if (!pages[slug]) {
-        pages[slug] = {
-          title: currentTitle || "Untitled",
-          content: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        localStorage.setItem("novel-pages", JSON.stringify(pages));
-      } else if (pages[slug].title !== currentTitle) {
+      // Only update existing pages, don't create new ones
+      // Page creation should be handled by the actual page creation logic
+      if (pages[slug] && pages[slug].title !== currentTitle) {
         setCurrentTitle(pages[slug].title);
         updateAttributes({ title: pages[slug].title });
       }
-    };
 
     // Check for updates periodically
     const interval = setInterval(checkTitleUpdate, 1000);
