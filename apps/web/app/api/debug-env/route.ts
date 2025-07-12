@@ -8,7 +8,7 @@ export async function GET() {
       OPENAI_BASE_URL: OPENAI_BASE_URL,
       OPENAI_MODEL: process.env.OPENAI_MODEL || "NOT SET",
       NODE_ENV: process.env.NODE_ENV,
-      API_KEY_PREFIX: OPENAI_API_KEY ? OPENAI_API_KEY.substring(0, 10) + "..." : "NOT SET",
+      API_KEY_PREFIX: OPENAI_API_KEY ? `${OPENAI_API_KEY.substring(0, 10)}...` : "NOT SET",
     },
     message: "Environment debug endpoint. Use runtime API configuration in /settings for better user experience.",
   });

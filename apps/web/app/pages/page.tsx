@@ -13,6 +13,8 @@ interface PageData {
   content: any;
   createdAt: string;
   updatedAt: string;
+  parentSlug?: string;
+  isSubPage?: boolean;
 }
 
 interface PagesList {
@@ -97,7 +99,7 @@ export default function PagesListPage() {
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Header */}
         <div className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="flex items-center gap-4 p-4 max-w-4xl mx-auto">
+          <div className={`flex items-center gap-4 ${sidebarOpen ? 'px-4 py-4 max-w-none' : 'p-4 max-w-4xl mx-auto'}`}>
             <Button
               variant="ghost"
               size="sm"
@@ -117,8 +119,8 @@ export default function PagesListPage() {
         </div>
 
       {/* Content */}
-      <div className="p-4">
-        <div className="max-w-4xl mx-auto">
+      <div className={`${sidebarOpen ? 'p-4' : 'p-4'}`}>
+        <div className={`${sidebarOpen ? 'max-w-none' : 'max-w-4xl mx-auto'}`}>
           {pageEntries.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />

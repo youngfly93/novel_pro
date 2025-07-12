@@ -27,7 +27,8 @@
       "Bash(git push:*)",
       "Bash(pkill:*)",
       "Bash(true)",
-      "Bash(pnpm turbo lint:*)"
+      "Bash(pnpm turbo lint:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

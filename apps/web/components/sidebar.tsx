@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/tailwind/ui/button";
-import { Home, FileText, Plus, ChevronRight, ChevronDown, Settings, Menu, X } from "lucide-react";
+import { Home, FileText, Plus, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -11,6 +12,8 @@ interface PageData {
   content: any;
   createdAt: string;
   updatedAt: string;
+  parentSlug?: string;
+  isSubPage?: boolean;
 }
 
 interface PagesList {
@@ -26,7 +29,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [pages, setPages] = useState<PagesList>({});
-  const [isPagesExpanded, setIsPagesExpanded] = useState(true);
 
   useEffect(() => {
     const loadPages = () => {
@@ -97,9 +99,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     return false;
   };
 
-  const pageEntries = Object.entries(pages).sort(
-    ([, a], [, b]) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  // Filter to show only parent pages (not sub pages created via /page command)
+  const pageEntries = Object.entries(pages)
+    .filter(([, page]) => !page.isSubPage) // Only show parent pages
+    .sort(([, a], [, b]) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   return (
     <>
@@ -108,6 +111,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={onToggle}
+          onKeyDown={(e) => e.key === 'Escape' && onToggle()}
+          role="button"
+          tabIndex={0}
+          aria-label="Close sidebar"
         />
       )}
       

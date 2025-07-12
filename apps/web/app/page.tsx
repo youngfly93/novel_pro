@@ -15,8 +15,8 @@ export default function Page() {
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col items-center gap-4 py-4 sm:px-5 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        <div className="flex w-full max-w-4xl items-center gap-2 px-4 sm:mb-[calc(10vh)]">
+      <div className={`flex-1 flex flex-col items-center gap-4 py-4 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+        <div className={`flex w-full max-w-4xl items-center gap-2 sm:mb-[calc(10vh)] ${sidebarOpen ? 'px-4' : 'px-4 sm:px-5'}`}>
           <Button
             variant="ghost"
             size="sm"

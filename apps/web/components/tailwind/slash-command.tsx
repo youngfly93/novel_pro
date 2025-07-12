@@ -51,11 +51,17 @@ export const suggestionItems = createSuggestionItems([
       const savedPages = localStorage.getItem("novel-pages");
       const pages = savedPages ? JSON.parse(savedPages) : {};
 
+      // Get current page slug from URL to set as parent
+      const currentPath = window.location.pathname;
+      const currentSlug = currentPath.startsWith('/page/') ? currentPath.split('/page/')[1] : null;
+
       pages[slug] = {
         title: "Untitled",
         content: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        parentSlug: currentSlug, // Track parent page
+        isSubPage: true, // Mark as sub page
       };
 
       localStorage.setItem("novel-pages", JSON.stringify(pages));
