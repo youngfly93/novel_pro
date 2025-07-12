@@ -27,38 +27,39 @@ export const suggestionItems = createSuggestionItems([
       // Generate unique page ID
       const pageId = `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const slug = pageId;
-      
+
       // Create page reference in current editor first
-      editor.chain()
+      editor
+        .chain()
         .focus()
         .deleteRange(range)
         .insertContent({
-          type: 'pageReference',
+          type: "pageReference",
           attrs: {
             pageId: pageId,
             slug: slug,
-            title: 'Untitled',
+            title: "Untitled",
           },
         })
         .run();
-      
+
       // Force immediate save of editor content to prevent race condition
       const json = editor.getJSON();
-      window.localStorage.setItem('novel-content', JSON.stringify(json));
-      
+      window.localStorage.setItem("novel-content", JSON.stringify(json));
+
       // Save page to localStorage
-      const savedPages = localStorage.getItem('novel-pages');
+      const savedPages = localStorage.getItem("novel-pages");
       const pages = savedPages ? JSON.parse(savedPages) : {};
-      
+
       pages[slug] = {
-        title: 'Untitled',
+        title: "Untitled",
         content: null,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
-      
-      localStorage.setItem('novel-pages', JSON.stringify(pages));
-      
+
+      localStorage.setItem("novel-pages", JSON.stringify(pages));
+
       // Navigate to the new page
       setTimeout(() => {
         window.location.href = `/page/${slug}`;

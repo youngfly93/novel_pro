@@ -6,13 +6,11 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-gray-700 text-lg">
-            Configure your AI API settings to enable powerful writing features
-          </p>
+          <p className="text-gray-700 text-lg">Configure your AI API settings to enable powerful writing features</p>
         </div>
-        
+
         <ApiKeyManager />
-        
+
         <div className="mt-8 text-center">
           <a
             href="/"

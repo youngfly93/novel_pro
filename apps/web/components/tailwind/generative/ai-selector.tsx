@@ -58,12 +58,10 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
           </div>
           <div>
             <h3 className="font-medium text-gray-900">Configure AI API</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Set up your API key to enable AI-powered writing features
-            </p>
+            <p className="text-sm text-gray-500 mt-1">Set up your API key to enable AI-powered writing features</p>
           </div>
           <Button
-            onClick={() => window.open('/settings', '_blank')}
+            onClick={() => window.open("/settings", "_blank")}
             className="w-full bg-purple-600 hover:bg-purple-700"
           >
             <Settings className="w-4 h-4 mr-2" />
@@ -136,7 +134,9 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
               completion={completion}
             />
           ) : (
-            <AISelectorCommands onSelect={(value, option) => complete(value, { body: { option, apiConfig: config } })} />
+            <AISelectorCommands
+              onSelect={(value, option) => complete(value, { body: { option, apiConfig: config } })}
+            />
           )}
         </>
       )}

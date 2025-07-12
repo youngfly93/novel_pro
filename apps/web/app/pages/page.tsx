@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/tailwind/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/tailwind/ui/card";
-import { ArrowLeft, FileText, Plus, Trash2 } from "lucide-react";
+import Sidebar from "@/components/sidebar";
+import { Menu, FileText, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -22,10 +23,11 @@ export default function PagesListPage() {
   const router = useRouter();
   const [pages, setPages] = useState<PagesList>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const loadPages = () => {
-      const savedPages = localStorage.getItem('novel-pages');
+      const savedPages = localStorage.getItem("novel-pages");
       if (savedPages) {
         setPages(JSON.parse(savedPages));
       }
@@ -36,29 +38,41 @@ export default function PagesListPage() {
   }, []);
 
   const createNewPage = () => {
-    const pageName = prompt("Enter page name:");
-    if (pageName && pageName.trim()) {
-      const slug = pageName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    try {
+      // Generate a unique slug using timestamp
+      const timestamp = Date.now();
+      const slug = `untitled-${timestamp}`;
+      
       router.push(`/page/${slug}`);
+    } catch (error) {
+      console.error('创建页面时出错:', error);
+      alert('创建页面失败，请重试');
     }
   };
 
   const deletePage = (slug: string) => {
-    if (confirm('Are you sure you want to delete this page?')) {
-      const updatedPages = { ...pages };
-      delete updatedPages[slug];
-      localStorage.setItem('novel-pages', JSON.stringify(updatedPages));
-      setPages(updatedPages);
+    const result = confirm("确定要删除此页面吗？");
+    if (result) {
+      try {
+        const updatedPages = { ...pages };
+        delete updatedPages[slug];
+        localStorage.setItem("novel-pages", JSON.stringify(updatedPages));
+        setPages(updatedPages);
+      } catch (error) {
+        console.error('删除页面时出错:', error);
+        alert('删除页面失败，请重试');
+      }
     }
+    // 如果用户取消，什么都不做
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -70,37 +84,41 @@ export default function PagesListPage() {
     );
   }
 
-  const pageEntries = Object.entries(pages).sort(([, a], [, b]) => 
-    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  const pageEntries = Object.entries(pages).sort(
+    ([, a], [, b]) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center gap-4 p-4 max-w-screen-lg mx-auto">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => router.push('/')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Home
-          </Button>
-          
-          <h1 className="text-2xl font-semibold flex-1">All Pages</h1>
-          
-          <Button onClick={createNewPage} className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Page
-          </Button>
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      
+      {/* Main Content */}
+      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+        {/* Header */}
+        <div className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="flex items-center gap-4 p-4 max-w-4xl mx-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="gap-2"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+
+            <h1 className="text-2xl font-semibold flex-1">All Pages</h1>
+
+            <Button onClick={createNewPage} className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Page
+            </Button>
+          </div>
         </div>
-      </div>
 
       {/* Content */}
       <div className="p-4">
-        <div className="max-w-screen-lg mx-auto">
+        <div className="max-w-4xl mx-auto">
           {pageEntries.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -118,12 +136,8 @@ export default function PagesListPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">
-                          {page.title || 'Untitled Page'}
-                        </CardTitle>
-                        <CardDescription className="text-sm">
-                          Updated {formatDate(page.updatedAt)}
-                        </CardDescription>
+                        <CardTitle className="text-lg truncate">{page.title || "Untitled Page"}</CardTitle>
+                        <CardDescription className="text-sm">Updated {formatDate(page.updatedAt)}</CardDescription>
                       </div>
                       <Button
                         variant="ghost"
@@ -152,6 +166,7 @@ export default function PagesListPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

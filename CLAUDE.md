@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Novel is an open-source Notion-style WYSIWYG editor with AI-powered autocompletions. It's a monorepo built with Next.js, TypeScript, and Tiptap (based on ProseMirror).
+Novel Pro is an enhanced version of the open-source Notion-style WYSIWYG editor with AI-powered autocompletions. It features OpenRouter integration for multiple AI models with automatic fallback, runtime API configuration, and enhanced AI capabilities. Built as a monorepo with Next.js, TypeScript, and Tiptap (based on ProseMirror).
 
 ## Architecture
 
@@ -49,8 +49,9 @@ pnpm clean        # Clean all build artifacts
 - **Editor Core**: Tiptap v2 (ProseMirror-based)
 - **UI Components**: Radix UI with Tailwind CSS
 - **State Management**: Jotai for editor state
-- **AI Integration**: OpenAI API + Vercel AI SDK
+- **AI Integration**: OpenRouter API with multi-model support (Claude 3.5 Sonnet, GPT-4o Mini, Llama 3.2 3B)
 - **Build Tools**: Turborepo, tsup, Biome
+- **Runtime**: Vercel Edge Functions for AI endpoints
 
 ## Editor Extensions
 
@@ -64,9 +65,17 @@ The editor uses Tiptap extensions located in `packages/headless/src/extensions/`
 
 ## Environment Variables
 
-For AI features in the demo app:
-- `OPENAI_API_KEY` - Required for AI completions
+The app supports both environment-based and runtime API configuration:
+
+**For AI features** (Optional - can be configured via web interface):
+- `OPENAI_API_KEY` - OpenRouter or OpenAI API key
+- `OPENAI_BASE_URL` - API base URL (defaults to https://openrouter.ai/api/v1)
+- `OPENAI_MODEL` - Default model (defaults to anthropic/claude-3.5-sonnet)
+
+**For additional features**:
 - `BLOB_READ_WRITE_TOKEN` - For Vercel Blob storage (image uploads)
+- `KV_REST_API_URL` - For Vercel KV (rate limiting)
+- `KV_REST_API_TOKEN` - For Vercel KV authentication
 
 ## Code Style Guidelines
 
@@ -90,3 +99,23 @@ The headless package exports:
 - TypeScript types
 
 When modifying the headless package, ensure changes are backward compatible as it's published to npm.
+
+## AI Configuration
+
+This project supports flexible AI configuration:
+
+**Runtime Configuration** (Recommended):
+- Access via `/settings` page in the web app
+- Configure API keys, models, and providers without redeployment
+- Supports OpenRouter and OpenAI providers
+- Settings stored locally in browser for security
+
+**API Endpoints**:
+- `/api/generate` - Main AI completion endpoint with multi-model fallback
+- `/api/test-api-key` - Validates API configuration
+- `/api/debug-env` - Environment debugging (development only)
+
+**Model Priority** (OpenRouter):
+1. `anthropic/claude-3.5-sonnet` - High-quality responses
+2. `openai/gpt-4o-mini` - Cost-effective alternative  
+3. `meta-llama/llama-3.2-3b-instruct:free` - Free tier model

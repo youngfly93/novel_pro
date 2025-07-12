@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/tailwind/ui/button";
 import { Eye, EyeOff, Key, Save, Trash2, ExternalLink } from "lucide-react";
 
 interface ApiKeyConfig {
@@ -102,7 +101,7 @@ export function ApiKeyManager() {
       const testConfig = {
         ...config,
         baseUrl: config.baseUrl || provider.baseUrl, // Use provider's baseUrl if not set
-        provider: config.provider
+        provider: config.provider,
       };
 
       // Test the API key
@@ -118,7 +117,7 @@ export function ApiKeyManager() {
         // Save to localStorage with proper baseUrl
         const configToSave = {
           ...config,
-          baseUrl: config.baseUrl || provider.baseUrl
+          baseUrl: config.baseUrl || provider.baseUrl,
         };
         localStorage.setItem("novel-api-config", JSON.stringify(configToSave));
         setConfig(configToSave);
@@ -158,14 +157,14 @@ export function ApiKeyManager() {
         </h3>
         <p className="text-sm text-gray-700">
           Configure your AI API key to enable AI-powered writing features.
-          {isConfigured && (
-            <span className="text-green-600 font-medium ml-2">✓ Configured</span>
-          )}
+          {isConfigured && <span className="text-green-600 font-medium ml-2">✓ Configured</span>}
         </p>
       </div>
       <div className="p-6 pt-0 space-y-4">
         <div className="space-y-2">
-          <label htmlFor="provider" className="text-sm font-medium text-gray-900">AI Provider</label>
+          <label htmlFor="provider" className="text-sm font-medium text-gray-900">
+            AI Provider
+          </label>
           <select
             value={config.provider}
             onChange={(e) => handleProviderChange(e.target.value)}
@@ -192,7 +191,9 @@ export function ApiKeyManager() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="model" className="text-sm font-medium text-gray-900">AI Model</label>
+          <label htmlFor="model" className="text-sm font-medium text-gray-900">
+            AI Model
+          </label>
           <select
             value={config.model}
             onChange={(e) => setConfig({ ...config, model: e.target.value })}
@@ -207,7 +208,9 @@ export function ApiKeyManager() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="apiKey" className="text-sm font-medium text-gray-900">API Key</label>
+          <label htmlFor="apiKey" className="text-sm font-medium text-gray-900">
+            API Key
+          </label>
           <div className="relative">
             <input
               id="apiKey"
@@ -231,7 +234,9 @@ export function ApiKeyManager() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="baseUrl" className="text-sm font-medium text-gray-900">API Base URL</label>
+          <label htmlFor="baseUrl" className="text-sm font-medium text-gray-900">
+            API Base URL
+          </label>
           <input
             id="baseUrl"
             value={config.baseUrl}

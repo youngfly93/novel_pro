@@ -1,5 +1,5 @@
 import { Node, mergeAttributes } from "@tiptap/core";
-import { EditorState } from "@tiptap/pm/state";
+import type { EditorState } from "@tiptap/pm/state";
 import katex, { type KatexOptions } from "katex";
 
 export interface MathematicsOptions {
@@ -16,13 +16,12 @@ export interface MathematicsOptions {
    */
   katexOptions?: KatexOptions;
 
-  HTMLAttributes: Record<string, any>;
+  HTMLAttributes: Record<string, string | number | boolean>;
 }
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     LatexCommand: {
-
       /**
        * Set selection to a LaTex symbol
        */
@@ -32,16 +31,15 @@ declare module "@tiptap/core" {
        * Unset a LaTex symbol
        */
       unsetLatex: () => ReturnType;
-
     };
   }
 }
 
 /**
  * This extension adds support for mathematical symbols with LaTex expression.
- * 
+ *
  * NOTE: Don't forget to import `katex/dist/katex.min.css` CSS for KaTex styling.
- * 
+ *
  * @see https://katex.org/
  */
 export const Mathematics = Node.create<MathematicsOptions>({
@@ -66,7 +64,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
         if (!$pos.parent.isTextblock) {
           return false;
         }
-        
+
         return $pos.parent.type.name !== "codeBlock";
       },
       katexOptions: {
@@ -98,7 +96,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
                 attrs: {
                   latex: latex,
                 },
-              }
+              },
             )
             .setTextSelection({ from: from, to: from + 1 })
             .run();
@@ -132,7 +130,7 @@ export const Mathematics = Node.create<MathematicsOptions>({
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    const latex = node.attrs["latex"] ?? "";
+    const latex = node.attrs.latex ?? "";
     return [
       "span",
       mergeAttributes(HTMLAttributes, {
@@ -143,23 +141,23 @@ export const Mathematics = Node.create<MathematicsOptions>({
   },
 
   renderText({ node }) {
-    return node.attrs["latex"] ?? "";
+    return node.attrs.latex ?? "";
   },
 
   addNodeView() {
     return ({ node, HTMLAttributes, getPos, editor }) => {
       const dom = document.createElement("span");
-      const latex: string = node.attrs["latex"] ?? "";
+      const latex: string = node.attrs.latex ?? "";
 
       Object.entries(this.options.HTMLAttributes).forEach(([key, value]) => {
-        dom.setAttribute(key, value);
+        dom.setAttribute(key, String(value));
       });
 
       Object.entries(HTMLAttributes).forEach(([key, value]) => {
-        dom.setAttribute(key, value);
+        dom.setAttribute(key, String(value));
       });
 
-      dom.addEventListener("click", (evt) => {
+      dom.addEventListener("click", () => {
         if (editor.isEditable && typeof getPos === "function") {
           const pos = getPos();
           const nodeSize = node.nodeSize;

@@ -14,7 +14,20 @@
       "Bash(lsof:*)",
       "Bash(pnpm install:*)",
       "Bash(npm run dev:*)",
-      "Bash(hostname:*)"
+      "Bash(hostname:*)",
+      "Bash(mkdir:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm format:fix:*)",
+      "Bash(pntml typecheck:*)",
+      "Bash(pnpm add:*)",
+      "Bash(ls:*)",
+      "mcp__zen__debug",
+      "Bash(rm:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(pnpm turbo lint:*)"
     ],
     "deny": []
   }

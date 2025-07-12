@@ -95,6 +95,78 @@
   }
 }
 
+/* A4 Page Layout Styles */
+@layer components {
+  .editor-a4-layout {
+    /* A4 paper dimensions in pixels (at 96 DPI) */
+    max-width: 794px; /* 210mm */
+    min-height: 1123px; /* 297mm */
+    width: 100%;
+    margin: 0 auto;
+    padding: 96px 72px; /* 1 inch margins */
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Desktop: maintain A4 proportions */
+  @media (min-width: 850px) {
+    .editor-a4-layout {
+      width: 794px;
+    }
+  }
+  
+  /* Mobile: adjust padding and width */
+  @media (max-width: 849px) {
+    .editor-a4-layout {
+      width: calc(100% - 32px);
+      margin: 0 16px;
+      padding: 48px 24px;
+      min-height: auto;
+    }
+  }
+  
+  .editor-a4-layout.dark {
+    background: #1f2937;
+    color: white;
+  }
+  
+  /* Ensure content within A4 layout doesn't overflow */
+  .editor-a4-layout * {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+  
+  /* Handle images and media within A4 layout */
+  .editor-a4-layout img,
+  .editor-a4-layout video,
+  .editor-a4-layout iframe {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Handle code blocks */
+  .editor-a4-layout pre {
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  
+  /* Handle tables */
+  .editor-a4-layout table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  
+  .editor-a4-layout td,
+  .editor-a4-layout th {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+}
 
 pre {
   background: #0d0d0d;

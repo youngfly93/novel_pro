@@ -39,11 +39,10 @@ interface TailwindAdvancedEditorProps {
   darkMode?: boolean;
 }
 
-const TailwindAdvancedEditor = ({ 
-  initialContent: propInitialContent, 
+const TailwindAdvancedEditor = ({
+  initialContent: propInitialContent,
   onUpdate: propOnUpdate,
-  pageTitle,
-  darkMode = false
+  darkMode = false,
 }: TailwindAdvancedEditorProps = {}) => {
   const [initialContent, setInitialContent] = useState<null | JSONContent>(null);
   const [saveStatus, setSaveStatus] = useState("Saved");
@@ -68,7 +67,7 @@ const TailwindAdvancedEditor = ({
   const debouncedUpdates = useDebouncedCallback(async (editor: EditorInstance) => {
     const json = editor.getJSON();
     setCharsCount(editor.storage.characterCount.words());
-    
+
     if (propOnUpdate) {
       // Use custom update handler for page-specific content
       propOnUpdate(json);
@@ -84,7 +83,20 @@ const TailwindAdvancedEditor = ({
   useEffect(() => {
     if (propInitialContent !== undefined) {
       // Use provided initial content
-      setInitialContent(propInitialContent || defaultEditorContent);
+      if (propInitialContent === null) {
+        // For null initial content (new pages), use empty content
+        setInitialContent({
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [],
+            },
+          ],
+        });
+      } else {
+        setInitialContent(propInitialContent);
+      }
     } else {
       // Default behavior - load from localStorage
       const content = window.localStorage.getItem("novel-content");
@@ -96,10 +108,20 @@ const TailwindAdvancedEditor = ({
   if (!initialContent) return null;
 
   return (
-    <div className={`relative w-full max-w-screen-lg ${darkMode ? 'dark' : ''}`}>
-      <div className="flex absolute right-5 top-5 z-10 mb-5 gap-2">
-        <div className={`rounded-lg px-2 py-1 text-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-accent text-muted-foreground'}`}>{saveStatus}</div>
-        <div className={charsCount ? `rounded-lg px-2 py-1 text-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-accent text-muted-foreground'}` : "hidden"}>
+    <div className={`relative w-full ${darkMode ? "dark" : ""}`}>
+      <div className="flex absolute right-8 top-8 z-10 mb-5 gap-2">
+        <div
+          className={`rounded-lg px-2 py-1 text-sm ${darkMode ? "bg-gray-700 text-gray-300" : "bg-accent text-muted-foreground"}`}
+        >
+          {saveStatus}
+        </div>
+        <div
+          className={
+            charsCount
+              ? `rounded-lg px-2 py-1 text-sm ${darkMode ? "bg-gray-700 text-gray-300" : "bg-accent text-muted-foreground"}`
+              : "hidden"
+          }
+        >
           {charsCount} Words
         </div>
       </div>
@@ -107,11 +129,7 @@ const TailwindAdvancedEditor = ({
         <EditorContent
           initialContent={initialContent}
           extensions={extensions}
-          className={`relative min-h-[500px] w-full max-w-screen-lg sm:mb-[calc(20vh)] sm:rounded-lg sm:shadow-lg ${
-            darkMode 
-              ? 'bg-gray-800 border-gray-600 text-white' 
-              : 'border-muted bg-background sm:border'
-          }`}
+          className={`editor-a4-layout ${darkMode ? "dark" : ""} relative sm:mb-[calc(10vh)] sm:rounded-lg`}
           editorProps={{
             handleDOMEvents: {
               keydown: (_view, event) => handleCommandNavigation(event),
@@ -119,9 +137,9 @@ const TailwindAdvancedEditor = ({
             handlePaste: (view, event) => handleImagePaste(view, event, uploadFn),
             handleDrop: (view, event, _slice, moved) => handleImageDrop(view, event, moved, uploadFn),
             attributes: {
-              class: darkMode 
-                ? "prose prose-lg prose-invert prose-headings:font-title font-default focus:outline-none max-w-full text-white"
-                : "prose prose-lg dark:prose-invert prose-headings:font-title font-default focus:outline-none max-w-full",
+              class: darkMode
+                ? "prose prose-lg prose-invert prose-headings:font-title font-default focus:outline-none max-w-none text-white"
+                : "prose prose-lg dark:prose-invert prose-headings:font-title font-default focus:outline-none max-w-none",
             },
           }}
           onUpdate={({ editor }) => {

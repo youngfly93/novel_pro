@@ -81,34 +81,35 @@ export const createImageUpload =
       view.dispatch(tr);
     };
 
-    onUpload(file).then((src) => {
-      const { schema } = view.state;
+    onUpload(file).then(
+      (src) => {
+        const { schema } = view.state;
 
-      const pos = findPlaceholder(view.state, id);
+        const pos = findPlaceholder(view.state, id);
 
-      // If the content around the placeholder has been deleted, drop
-      // the image
-      if (pos == null) return;
+        // If the content around the placeholder has been deleted, drop
+        // the image
+        if (pos == null) return;
 
-      // Otherwise, insert it at the placeholder's position, and remove
-      // the placeholder
+        // Otherwise, insert it at the placeholder's position, and remove
+        // the placeholder
 
-      // When BLOB_READ_WRITE_TOKEN is not valid or unavailable, read
-      // the image locally
-      const imageSrc = typeof src === "object" ? reader.result : src;
+        // When BLOB_READ_WRITE_TOKEN is not valid or unavailable, read
+        // the image locally
+        const imageSrc = typeof src === "object" ? reader.result : src;
 
-      const node = schema.nodes.image?.create({ src: imageSrc });
-      if (!node) return;
+        const node = schema.nodes.image?.create({ src: imageSrc });
+        if (!node) return;
 
-      const transaction = view.state.tr.replaceWith(pos, pos, node).setMeta(uploadKey, { remove: { id } });
-      view.dispatch(transaction);
-    }, () => {
-      // Deletes the image placeholder on error
-      const transaction = view.state.tr
-        .delete(pos, pos)
-        .setMeta(uploadKey, { remove: { id } });
-      view.dispatch(transaction);
-    });
+        const transaction = view.state.tr.replaceWith(pos, pos, node).setMeta(uploadKey, { remove: { id } });
+        view.dispatch(transaction);
+      },
+      () => {
+        // Deletes the image placeholder on error
+        const transaction = view.state.tr.delete(pos, pos).setMeta(uploadKey, { remove: { id } });
+        view.dispatch(transaction);
+      },
+    );
   };
 
 export type UploadFn = (file: File, view: EditorView, pos: number) => void;
