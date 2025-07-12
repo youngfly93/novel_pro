@@ -27,6 +27,7 @@ const PageReferenceComponent = ({ node, updateAttributes }: NodeViewProps) => {
         setCurrentTitle(pages[slug].title);
         updateAttributes({ title: pages[slug].title });
       }
+    };
 
     // Check for updates periodically
     const interval = setInterval(checkTitleUpdate, 1000);
