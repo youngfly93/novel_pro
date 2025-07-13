@@ -19,11 +19,44 @@
 
 /* Ghost text for AI autocomplete */
 .ProseMirror .ghost-text {
-  color: #9ca3af;
-  font-style: italic;
-  pointer-events: none;
-  user-select: none;
-  opacity: 0.7;
+  color: #9ca3af !important;
+  font-style: normal !important;
+  font-weight: normal !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  opacity: 0.5 !important;
+  position: relative !important;
+  display: inline !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ProseMirror .ghost-text-container {
+  color: #9ca3af !important;
+  font-style: normal !important;
+  font-weight: normal !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  opacity: 0.5 !important;
+  display: inline-block !important;
+  max-width: 100% !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  vertical-align: top !important;
+  box-sizing: border-box !important;
+}
+
+.ProseMirror .ghost-text-line {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Custom image styles */

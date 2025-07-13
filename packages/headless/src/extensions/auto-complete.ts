@@ -691,29 +691,46 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               // Create a widget decoration to display the ghost text after the cursor
               // Use stable key to avoid unnecessary DOM recreation
               const uniqueKey = `ghost-text-${from}-${ghostText.length}`;
+              
+              // Split ghost text into lines if it contains newlines for better wrapping
+              const ghostLines = ghostText.split('\n');
+              
               const widget = Decoration.widget(
                 from,
                 () => {
-                  const span = document.createElement("span");
-                  span.className = "ghost-text";
-                  span.style.cssText = `
-                  color: #9ca3af !important; 
-                  pointer-events: none; 
-                  font-style: normal; 
-                  font-weight: normal !important;
-                  opacity: 0.5 !important; 
-                  user-select: none !important;
-                  position: relative !important;
-                  display: inline !important;
-                  white-space: nowrap !important;
-                  font-size: inherit !important;
-                `;
-                  span.textContent = ghostText;
-                  span.setAttribute("data-testid", "ghost-text");
-                  span.setAttribute("data-ghost-content", ghostText);
-                  span.setAttribute("contenteditable", "false");
+                  if (ghostLines.length > 1) {
+                    // For multi-line ghost text, create a container div
+                    const container = document.createElement("div");
+                    container.className = "ghost-text-container";
+                    
+                    ghostLines.forEach((line, index) => {
+                      const span = document.createElement("span");
+                      span.className = "ghost-text-line";
+                      span.style.display = index === 0 ? 'inline' : 'block';
+                      span.textContent = line;
+                      container.appendChild(span);
+                      
+                      if (index < ghostLines.length - 1) {
+                        container.appendChild(document.createElement("br"));
+                      }
+                    });
+                    
+                    container.setAttribute("data-testid", "ghost-text");
+                    container.setAttribute("data-ghost-content", ghostText);
+                    container.setAttribute("contenteditable", "false");
+                    
+                    return container;
+                  } else {
+                    // For single-line ghost text, use a span
+                    const span = document.createElement("span");
+                    span.className = "ghost-text";
+                    span.textContent = ghostText;
+                    span.setAttribute("data-testid", "ghost-text");
+                    span.setAttribute("data-ghost-content", ghostText);
+                    span.setAttribute("contenteditable", "false");
 
-                  return span;
+                    return span;
+                  }
                 },
                 {
                   side: 1, // Position after the cursor
