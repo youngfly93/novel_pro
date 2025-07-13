@@ -3,6 +3,7 @@
 import TailwindAdvancedEditor from "@/components/tailwind/advanced-editor";
 import { Button } from "@/components/tailwind/ui/button";
 import Sidebar from "@/components/sidebar";
+import ExportMenu from "@/components/export-menu";
 import { Menu, Settings, Share, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -133,6 +134,7 @@ export default function DynamicPage() {
             <div className="flex-1" />
 
             <div className="flex items-center gap-2">
+              <ExportMenu title={title} content={pageData?.content} pageSlug={slug} />
               <Button variant="ghost" size="sm" className="gap-2">
                 <Share className="h-4 w-4" />
                 Share
