@@ -137,7 +137,9 @@ export function ApiKeyManager() {
         localStorage.setItem("novel-api-config", JSON.stringify(configToSave));
         setConfig(configToSave);
         setIsConfigured(true);
-        alert("API key and autocomplete settings configured successfully! Changes will take effect when you reload the editor.");
+        alert(
+          "API key and autocomplete settings configured successfully! Changes will take effect when you reload the editor.",
+        );
       } else {
         alert(result.error || "Failed to validate API key");
       }

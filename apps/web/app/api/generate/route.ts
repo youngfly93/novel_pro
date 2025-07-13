@@ -193,20 +193,21 @@ export async function POST(req: Request): Promise<Response> {
 
     // Try multiple models in order of preference, starting with user's selected model
     // For autocomplete, prioritize faster models
-    const modelsToTry = option === "autocomplete" 
-      ? [
-          modelName, // User's selected model first
-          "openai/gpt-4o-mini", // Faster model
-          "anthropic/claude-3.5-sonnet",
-          "meta-llama/llama-3.2-3b-instruct:free",
-        ]
-      : [
-          modelName, // User's selected model first
-          "anthropic/claude-3.5-sonnet",
-          "openai/gpt-4o-mini",
-          "meta-llama/llama-3.2-3b-instruct:free",
-        ];
-    
+    const modelsToTry =
+      option === "autocomplete"
+        ? [
+            modelName, // User's selected model first
+            "openai/gpt-4o-mini", // Faster model
+            "anthropic/claude-3.5-sonnet",
+            "meta-llama/llama-3.2-3b-instruct:free",
+          ]
+        : [
+            modelName, // User's selected model first
+            "anthropic/claude-3.5-sonnet",
+            "openai/gpt-4o-mini",
+            "meta-llama/llama-3.2-3b-instruct:free",
+          ];
+
     const uniqueModels = modelsToTry.filter((model, index, arr) => arr.indexOf(model) === index); // Remove duplicates
 
     let response = null;
@@ -244,7 +245,10 @@ export async function POST(req: Request): Promise<Response> {
               status: 200,
               headers: {
                 "Content-Type": "text/event-stream",
-                "Cache-Control": option === "autocomplete" ? "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" : "no-cache",
+                "Cache-Control":
+                  option === "autocomplete"
+                    ? "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400"
+                    : "no-cache",
                 Connection: "keep-alive",
                 "Access-Control-Allow-Origin": "*",
                 "X-Accel-Buffering": "no", // Disable Nginx buffering
@@ -340,7 +344,8 @@ export async function POST(req: Request): Promise<Response> {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": option === "autocomplete" ? "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" : "no-cache",
+        "Cache-Control":
+          option === "autocomplete" ? "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" : "no-cache",
         "X-Accel-Buffering": "no",
       },
     });

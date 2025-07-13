@@ -163,7 +163,7 @@ const markdownExtension = MarkdownExtension.configure({
 
 // Load autocomplete settings from localStorage with defaults
 const loadAutoCompleteSettings = () => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return { delay: 20, minLength: 3, maxTokens: 150 };
   }
   try {

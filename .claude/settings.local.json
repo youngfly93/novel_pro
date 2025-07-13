@@ -36,7 +36,12 @@
       "Bash(pnpm build:*)",
       "Bash(pnpm format:*)",
       "Bash(npx biome format:*)",
-      "Bash(pnpm -F novel format --write src)"
+      "Bash(pnpm -F novel format --write src)",
+      "Bash(pnpm -F novel lint)",
+      "Bash(git restore:*)",
+      "mcp__zen__analyze",
+      "Bash(pnpm -F novel lint --write)",
+      "Bash(PORT=3002 pnpm dev)"
     ],
     "deny": []
   }

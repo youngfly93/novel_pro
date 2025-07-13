@@ -252,3 +252,79 @@ span[style] > strong {
 mark[style] > strong {
   color: inherit;
 }
+
+/* Fix for bubble menu icons */
+.ProseMirror .lucide {
+  display: inline-block;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+/* Ensure SVG icons are properly sized and displayed */
+.ProseMirror svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Fix for text buttons in bubble menu - Enhanced */
+[data-bubble-menu] svg,
+.tippy-content svg,
+.editor-bubble svg,
+.tippy-box svg,
+div[data-tippy-root] svg {
+  display: inline-block !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  stroke-width: 2 !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Specific bubble menu button SVG fixes */
+.tippy-content button svg,
+[data-bubble-menu] button svg {
+  display: inline-block !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  stroke-width: 2 !important;
+  width: 16px !important;
+  height: 16px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+}
+
+/* General lucide icon fix */
+.lucide {
+  display: inline-block !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  stroke-width: 2 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Button icon fix */
+button svg {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Force SVG path visibility */
+svg path {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
