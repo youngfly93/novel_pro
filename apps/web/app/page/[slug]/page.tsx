@@ -25,7 +25,7 @@ export default function DynamicPage() {
 
   const [pageData, setPageData] = useState<PageData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("Untitled");
   const [showTitleInput, setShowTitleInput] = useState(false);
   const [isNewPage, setIsNewPage] = useState(false);
   const [parentPage, setParentPage] = useState<PageData | null>(null);
@@ -40,59 +40,36 @@ export default function DynamicPage() {
   };
 
   useEffect(() => {
-    // Load page data from localStorage
-    const loadPageData = () => {
-      const savedPages = localStorage.getItem("novel-pages");
-      const pages = savedPages ? JSON.parse(savedPages) : {};
+    // Load page data from localStorage immediately
+    const savedPages = localStorage.getItem("novel-pages");
+    const pages = savedPages ? JSON.parse(savedPages) : {};
 
-      // Debug logging
-      console.log("Loading page data for:", slug);
-      console.log("All pages:", Object.keys(pages));
-      console.log(
-        "Parent pages:",
-        Object.keys(pages).filter((key) => !pages[key].isSubPage),
-      );
-      console.log(
-        "Sub pages:",
-        Object.keys(pages).filter((key) => pages[key].isSubPage),
-      );
-      console.log("Target page exists:", !!pages[slug]);
-      if (pages[slug]) {
-        console.log("Page data:", pages[slug]);
+    if (pages[slug]) {
+      // Page exists, load it
+      const currentPageData = pages[slug];
+      setPageData(currentPageData);
+      setTitle(currentPageData.title);
+
+      // Load parent page data if this is a sub page
+      if (currentPageData.parentSlug && pages[currentPageData.parentSlug]) {
+        setParentPage(pages[currentPageData.parentSlug]);
       }
+    } else {
+      // Create new page immediately
+      const newPage: PageData = {
+        title: "Untitled",
+        content: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-      if (pages[slug]) {
-        const currentPageData = pages[slug];
+      pages[slug] = newPage;
+      localStorage.setItem("novel-pages", JSON.stringify(pages));
+      setPageData(newPage);
+      setTitle(newPage.title);
+    }
 
-        // Note: Removed problematic data integrity check that was incorrectly modifying page relationships
-
-        setPageData(currentPageData);
-        setTitle(currentPageData.title);
-
-        // Load parent page data if this is a sub page
-        if (currentPageData.parentSlug && pages[currentPageData.parentSlug]) {
-          setParentPage(pages[currentPageData.parentSlug]);
-        }
-        // Don't show title input, go directly to editor
-      } else {
-        // Create new page
-        const newPage: PageData = {
-          title: "Untitled",
-          content: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        pages[slug] = newPage;
-        localStorage.setItem("novel-pages", JSON.stringify(pages));
-        setPageData(newPage);
-        setTitle(newPage.title);
-        // Don't show title input, go directly to editor
-      }
-      setIsLoading(false);
-    };
-
-    loadPageData();
+    setIsLoading(false);
   }, [slug]);
 
   const savePageData = (content: any) => {
