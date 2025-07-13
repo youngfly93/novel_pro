@@ -42,7 +42,7 @@ const loadAutoCompleteSettings = () => {
   // Check if we're in a browser environment
   if (typeof window === "undefined") {
     return {
-      delay: 20,
+      delay: 10,
       minLength: 3,
       maxTokens: 150,
     };
@@ -53,7 +53,7 @@ const loadAutoCompleteSettings = () => {
     if (saved) {
       const config = JSON.parse(saved);
       return {
-        delay: config.delay || 20,
+        delay: config.delay || 10,
         minLength: config.minLength || 3,
         maxTokens: config.maxTokens || 150,
       };
@@ -63,7 +63,7 @@ const loadAutoCompleteSettings = () => {
   }
   // Return defaults if loading fails
   return {
-    delay: 20,
+    delay: 10,
     minLength: 3,
     maxTokens: 150,
   };
@@ -941,7 +941,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             }
 
             // Optimized delay for faster response
-            const delay = pluginState.isComposing ? options.delay * 10 : options.delay * 2; // Reduced from 5x to 2x
+            const delay = pluginState.isComposing ? options.delay * 5 : options.delay; // Further reduced: 1x for normal, 5x for IME
             debounceTimer = setTimeout(() => {
               // Check again if we're still not loading and not composing before triggering
               const currentState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
@@ -999,7 +999,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
                 if (!currentState.isComposing && !currentState.isLoading) {
                   triggerCompletion(view);
                 }
-              }, options.delay * 5); // Reduced from 10x to 5x for faster IME response
+              }, options.delay * 3); // Further reduced from 5x to 3x for faster IME response
 
               return false;
             },
