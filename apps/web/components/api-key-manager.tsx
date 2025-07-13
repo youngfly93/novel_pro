@@ -284,7 +284,7 @@ export function ApiKeyManager() {
                 max="500"
                 step="10"
                 value={config.maxTokens}
-                onChange={(e) => setConfig({ ...config, maxTokens: parseInt(e.target.value) || 150 })}
+                onChange={(e) => setConfig({ ...config, maxTokens: Number.parseInt(e.target.value) || 150 })}
                 className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-600">Controls how much text to predict (10-500)</p>
@@ -301,7 +301,7 @@ export function ApiKeyManager() {
                 max="2000"
                 step="10"
                 value={config.delay}
-                onChange={(e) => setConfig({ ...config, delay: parseInt(e.target.value) || 20 })}
+                onChange={(e) => setConfig({ ...config, delay: Number.parseInt(e.target.value) || 20 })}
                 className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-600">Delay before triggering autocomplete (0-2000ms)</p>
@@ -317,7 +317,7 @@ export function ApiKeyManager() {
                 min="1"
                 max="20"
                 value={config.minLength}
-                onChange={(e) => setConfig({ ...config, minLength: parseInt(e.target.value) || 3 })}
+                onChange={(e) => setConfig({ ...config, minLength: Number.parseInt(e.target.value) || 3 })}
                 className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-600">Minimum characters before triggering (1-20)</p>

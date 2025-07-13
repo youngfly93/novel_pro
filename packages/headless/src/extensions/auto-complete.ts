@@ -93,7 +93,11 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             const pluginState = AUTOCOMPLETE_PLUGIN_KEY.getState(state) as AutoCompleteState;
             if (pluginState?.ghostText) {
               tr.insertText(pluginState.ghostText);
-              tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, { ghostText: "", isLoading: false });
+              tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, { 
+                ghostText: "", 
+                isLoading: false,
+                requestId: Date.now().toString() // Force clear with unique ID
+              });
             }
           }
           return true;
@@ -124,9 +128,86 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
     let activeRequestId: string | null = null;
     let lastTriggerTime = 0;
     
+    // Performance metrics
+    const performanceMetrics = {
+      cacheHits: 0,
+      cacheMisses: 0,
+      prefetchHits: 0,
+      avgResponseTime: 0,
+      totalRequests: 0,
+      print: () => {
+        const hitRate = performanceMetrics.cacheHits / (performanceMetrics.cacheHits + performanceMetrics.cacheMisses) * 100 || 0;
+        console.log('📊 AutoComplete Performance:', {
+          cacheHitRate: `${hitRate.toFixed(1)}%`,
+          cacheHits: performanceMetrics.cacheHits,
+          cacheMisses: performanceMetrics.cacheMisses,
+          prefetchHits: performanceMetrics.prefetchHits,
+          avgResponseTime: `${performanceMetrics.avgResponseTime.toFixed(0)}ms`,
+          totalRequests: performanceMetrics.totalRequests,
+        });
+      }
+    };
+    
+    // Print metrics every 30 seconds in development
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      setInterval(() => performanceMetrics.print(), 30000);
+    }
+    
     // Enhanced cache for recent completions with larger size for better hit rate
     const completionCache = new Map<string, string>();
-    const MAX_CACHE_SIZE = 50;
+    const MAX_CACHE_SIZE = 100; // Increased for better hit rate
+    
+    // Prefetch cache for predictive loading
+    const prefetchCache = new Map<string, Promise<string>>();
+    const MAX_PREFETCH_SIZE = 20;
+
+    // Prefetch likely next completions
+    const prefetchNextCompletions = (_view: EditorView, currentPrompt: string, currentCompletion: string) => {
+      // Generate likely next prompts based on current completion
+      const firstWords = currentCompletion.split(/\s+/).slice(0, 3).join(' ');
+      const potentialPrompts = [
+        `${currentPrompt} ${firstWords.split(/\s+/)[0]}`, // Next word
+        `${currentPrompt} ${firstWords.split(/\s+/).slice(0, 2).join(' ')}`, // Next 2 words
+      ];
+      
+      potentialPrompts.forEach(nextPrompt => {
+        const cacheKey = nextPrompt.slice(-30);
+        
+        // Skip if already cached or being prefetched
+        if (completionCache.has(cacheKey) || prefetchCache.has(cacheKey)) {
+          return;
+        }
+        
+        // Create prefetch promise
+        const prefetchPromise = requestCompletionAsync(nextPrompt, options)
+          .then(completion => {
+            // Move to main cache when ready
+            if (completion) {
+              completionCache.set(cacheKey, completion);
+              prefetchCache.delete(cacheKey);
+              
+              // Maintain cache size
+              if (completionCache.size > MAX_CACHE_SIZE) {
+                const firstKey = completionCache.keys().next().value;
+                if (firstKey) completionCache.delete(firstKey);
+              }
+            }
+            return completion;
+          })
+          .catch(() => {
+            prefetchCache.delete(cacheKey);
+            return '';
+          });
+        
+        prefetchCache.set(cacheKey, prefetchPromise);
+        
+        // Maintain prefetch cache size
+        if (prefetchCache.size > MAX_PREFETCH_SIZE) {
+          const firstKey = prefetchCache.keys().next().value;
+          if (firstKey) prefetchCache.delete(firstKey);
+        }
+      });
+    };
 
     const triggerCompletion = (view: EditorView) => {
       const { from } = view.state.selection;
@@ -149,13 +230,21 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       
       const prompt = trimmedText;
       
-      // Multiple cache key strategies for better hit rate
-      const lastWords = textBefore.split(/\s+/).slice(-6).join(' ');
-      const last3Words = textBefore.split(/\s+/).slice(-3).join(' ');
+      // Enhanced cache key strategies for better hit rate
+      const words = textBefore.split(/\s+/);
+      const lastWords = words.slice(-6).join(' ');
+      const last3Words = words.slice(-3).join(' ');
+      const last2Words = words.slice(-2).join(' ');
+      const lastWord = words[words.length - 1] || '';
+      
+      // More granular cache keys for higher hit rate
       const cacheKeys = [
         lastWords || prompt,
         last3Words || prompt,
+        last2Words || prompt,
+        prompt.slice(-30), // Last 30 characters
         prompt.slice(-20), // Last 20 characters
+        prompt.slice(-15), // Last 15 characters
         prompt
       ];
       
@@ -164,6 +253,8 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
         const cachedCompletion = completionCache.get(cacheKey);
         if (cachedCompletion) {
           console.log('⚡ Cache hit for:', cacheKey);
+          performanceMetrics.cacheHits++;
+          
           // Instantly show cached completion
           view.dispatch(
             view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
@@ -172,12 +263,85 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               requestId: Date.now().toString(),
             }),
           );
+          
+          // Prefetch next likely completions
+          if (lastWord.length >= 2) {
+            prefetchNextCompletions(view, prompt, cachedCompletion);
+          }
+          
+          return;
+        }
+      }
+      
+      // Check prefetch cache
+      for (const cacheKey of cacheKeys) {
+        const prefetchPromise = prefetchCache.get(cacheKey);
+        if (prefetchPromise) {
+          console.log('🔮 Prefetch hit for:', cacheKey);
+          performanceMetrics.prefetchHits++;
+          
+          prefetchPromise.then(completion => {
+            // Only apply if still relevant
+            const currentState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
+            if (!currentState.ghostText && !currentState.isLoading) {
+              view.dispatch(
+                view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                  ghostText: completion,
+                  isLoading: false,
+                  requestId: Date.now().toString(),
+                }),
+              );
+            }
+          });
           return;
         }
       }
       
       console.log('🌐 Cache miss, requesting new completion');
+      performanceMetrics.cacheMisses++;
       requestCompletion(view, prompt);
+    };
+
+    // Async version for prefetching (doesn't update UI)
+    const requestCompletionAsync = async (prompt: string, opts: AutoCompleteOptions): Promise<string> => {
+      const abortController = new AbortController();
+      
+      try {
+        let apiConfig = null;
+        try {
+          const savedConfig = localStorage.getItem("novel-api-config");
+          if (savedConfig) apiConfig = JSON.parse(savedConfig);
+        } catch (_e) {}
+
+        const requestBody: {
+          prompt: string;
+          option: string;
+          stream: boolean;
+          maxTokens?: number;
+          apiConfig?: unknown;
+        } = {
+          prompt,
+          option: "autocomplete",
+          stream: false, // Non-streaming for prefetch
+          maxTokens: opts.maxTokens,
+        };
+
+        if (apiConfig) requestBody.apiConfig = apiConfig;
+
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        return data.text || '';
+      } catch (_error) {
+        return '';
+      }
     };
 
     const requestCompletion = async (view: EditorView, prompt: string) => {
@@ -193,6 +357,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       }
 
       const abortController = new AbortController();
+      const startTime = Date.now();
 
       try {
         // Set loading state
@@ -205,6 +370,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
         );
 
         let stream: ReadableStream | null = null;
+        let response: Response | null = null;
 
         if (options.onRequest) {
           // Use custom request handler if provided
@@ -231,7 +397,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           } = {
             prompt,
             option: "autocomplete",
-            stream: true,
+            stream: false, // Disable streaming for autocomplete to get complete sentences
             maxTokens: options.maxTokens,
           };
 
@@ -239,7 +405,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             requestBody.apiConfig = apiConfig;
           }
 
-          const response = await fetch("/api/generate", {
+          response = await fetch("/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(requestBody),
@@ -248,130 +414,173 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
           if (!response.ok) {
             const errorText = await response.text();
+            console.error('❌ API Error:', errorText);
             throw new Error(`HTTP ${response.status}: ${errorText}`);
           }
 
-          stream = response.body;
+          // For non-streaming autocomplete, we don't use the body stream
+          if (requestBody.stream) {
+            stream = response.body;
+          } else {
+            stream = null; // We'll handle non-streaming differently
+          }
         }
 
-        if (!stream) {
-          throw new Error("No response stream");
-        }
-        const reader = stream.getReader();
         let accumulatedText = "";
 
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
+        if (stream) {
+          // Streaming response (for other operations)
+          const reader = stream.getReader();
 
-            if (done) {
-              break;
-            }
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
 
-            const chunk = new TextDecoder().decode(value);
-            const lines = chunk.split("\n");
+              if (done) {
+                break;
+              }
 
-            for (const line of lines) {
-              // Handle both SSE format and direct OpenRouter stream format
-              let dataToProcess = null;
+              const chunk = new TextDecoder().decode(value);
+              const lines = chunk.split("\n");
 
-              if (line.startsWith("data: ")) {
-                // SSE format
-                try {
-                  const jsonStr = line.slice(6);
-                  if (jsonStr.trim() === "[DONE]") {
+              for (const line of lines) {
+                // Handle both SSE format and direct OpenRouter stream format
+                let dataToProcess = null;
+
+                if (line.startsWith("data: ")) {
+                  // SSE format
+                  try {
+                    const jsonStr = line.slice(6);
+                    if (jsonStr.trim() === "[DONE]") {
+                      continue;
+                    }
+                    dataToProcess = JSON.parse(jsonStr);
+                  } catch (_e) {
                     continue;
                   }
-                  dataToProcess = JSON.parse(jsonStr);
-                } catch (_e) {
+                } else if (line.trim()?.startsWith("{")) {
+                  // Direct JSON format (OpenRouter stream)
+                  try {
+                    dataToProcess = JSON.parse(line.trim());
+                  } catch (_e) {
+                    continue;
+                  }
+                } else if (line.trim()) {
                   continue;
                 }
-              } else if (line.trim()?.startsWith("{")) {
-                // Direct JSON format (OpenRouter stream)
-                try {
-                  dataToProcess = JSON.parse(line.trim());
-                } catch (_e) {
-                  continue;
-                }
-              } else if (line.trim()) {
-                continue;
-              }
 
-              if (dataToProcess) {
-                const content = dataToProcess.choices?.[0]?.delta?.content;
-                if (content) {
-                  accumulatedText += content;
+                if (dataToProcess) {
+                  const content = dataToProcess.choices?.[0]?.delta?.content;
+                  if (content) {
+                    accumulatedText += content;
+                    console.log('📝 Streaming content:', { chunk: content, total: accumulatedText });
 
-                  // Only update if this is still the active request
-                  if (activeRequestId === requestId) {
-                    // Clean up the accumulated text to remove any overlap with input
-                    let cleanedText = accumulatedText;
-                    
-                    // Remove the prompt from the beginning if it's duplicated
-                    const promptLower = prompt.toLowerCase();
-                    const cleanedLower = cleanedText.toLowerCase();
-                    
-                    if (cleanedLower.startsWith(promptLower)) {
-                      cleanedText = accumulatedText.substring(prompt.length);
+                    // Only update if this is still the active request
+                    if (activeRequestId === requestId) {
+                      view.dispatch(
+                        view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                          ghostText: accumulatedText,
+                          isLoading: true,
+                          requestId,
+                        }),
+                      );
                     }
-                    
-                    // Also handle partial overlaps at word boundaries
-                    const promptWords = prompt.split(/\s+/);
-                    const lastPromptWord = promptWords[promptWords.length - 1]?.toLowerCase();
-                    
-                    if (lastPromptWord && cleanedText.toLowerCase().startsWith(lastPromptWord)) {
-                      // Find where the overlap ends
-                      const words = cleanedText.split(/\s+/);
-                      if (words[0]?.toLowerCase() === lastPromptWord) {
-                        cleanedText = cleanedText.substring(words[0].length).trimStart();
-                      }
-                    }
-
-                    // Update ghost text in real-time, keep loading state until stream completes
-                    view.dispatch(
-                      view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
-                        ghostText: cleanedText,
-                        isLoading: true, // Keep loading state until stream completes
-                        requestId,
-                      }),
-                    );
                   }
                 }
               }
             }
+          } catch (streamError: any) {
+            // If stream was aborted but we have accumulated text, still show it
+            if (streamError.name === 'AbortError' && accumulatedText && activeRequestId === requestId) {
+              let cleanedText = accumulatedText;
+              const promptLower = prompt.toLowerCase();
+              const cleanedLower = cleanedText.toLowerCase();
+              
+              if (cleanedLower.startsWith(promptLower)) {
+                cleanedText = accumulatedText.substring(prompt.length);
+              }
+              
+              view.dispatch(
+                view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                  ghostText: cleanedText,
+                  isLoading: false,
+                  requestId,
+                }),
+              );
+            }
+            throw streamError;
+          } finally {
+            reader.releaseLock();
           }
-        } finally {
-          reader.releaseLock();
+        } else if (response) {
+          // Non-streaming response (for autocomplete)
+          // Read the response text from the existing response
+          const responseText = await response.text();
           
-          // Cache the completion for instant future use (use cleaned text)
+          // Parse the response format (should be "0:"content"\n" format)
+          const lines = responseText.split('\n').filter((line: string) => line.trim());
+          for (const line of lines) {
+            if (line.startsWith('0:"') && line.endsWith('"')) {
+              // Extract content between 0:" and "
+              accumulatedText = line.slice(3, -1)
+                .replace(/\\"/g, '"')
+                .replace(/\\n/g, '\n')
+                .replace(/\\r/g, '\r')
+                .replace(/\\t/g, '\t')
+                .replace(/\\\\/g, '\\');
+              break;
+            }
+          }
+          console.log('💬 Non-streaming response:', { content: accumulatedText });
+        }
+
+        // Process the accumulated text (now from either streaming or non-streaming)
+        if (accumulatedText && activeRequestId === requestId) {
+          // Clean the response text
+          let finalCleanedText = accumulatedText;
+          
+          // Only remove if the AI literally repeated the entire prompt
+          if (accumulatedText.startsWith(prompt)) {
+            finalCleanedText = accumulatedText.substring(prompt.length).trim();
+          }
+
+          // Update the UI with the final result
+          view.dispatch(
+            view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+              ghostText: finalCleanedText || accumulatedText,
+              isLoading: false,
+              requestId,
+            }),
+          );
+
+          // Cache the completion for instant future use
           if (accumulatedText && prompt.length >= options.minLength) {
-            // Apply cleaning logic to cached text too
+            // Simple cleaning for cache - just remove exact prompt duplication
             let cachedText = accumulatedText;
             
-            const promptLower = prompt.toLowerCase();
-            const cleanedLower = cachedText.toLowerCase();
-            
-            if (cleanedLower.startsWith(promptLower)) {
-              cachedText = accumulatedText.substring(prompt.length);
+            if (accumulatedText.startsWith(prompt)) {
+              cachedText = accumulatedText.substring(prompt.length).trim();
             }
             
-            const promptWords = prompt.split(/\s+/);
-            const lastPromptWord = promptWords[promptWords.length - 1]?.toLowerCase();
+            // Store with multiple cache keys for better retrieval
+            const words = prompt.split(/\s+/);
+            const cacheKeysToStore = [
+              words.slice(-6).join(' ') || prompt,
+              words.slice(-3).join(' ') || prompt,
+              words.slice(-2).join(' ') || prompt,
+              prompt.slice(-30),
+              prompt.slice(-20),
+            ];
             
-            if (lastPromptWord && cachedText.toLowerCase().startsWith(lastPromptWord)) {
-              const words = cachedText.split(/\s+/);
-              if (words[0]?.toLowerCase() === lastPromptWord) {
-                cachedText = cachedText.substring(words[0].length).trimStart();
+            // Store under multiple keys for better hit rate
+            cacheKeysToStore.forEach(key => {
+              if (key?.trim()) {
+                completionCache.set(key, cachedText);
               }
-            }
-            
-            // Use the same cache key logic as retrieval
-            const lastWords = prompt.split(/\s+/).slice(-6).join(' ');
-            const cacheKey = lastWords || prompt; // Fallback to full prompt if not enough words
-            completionCache.set(cacheKey, cachedText);
+            });
             
             // Maintain cache size
-            if (completionCache.size > MAX_CACHE_SIZE) {
+            while (completionCache.size > MAX_CACHE_SIZE) {
               const firstKey = completionCache.keys().next().value;
               if (firstKey) {
                 completionCache.delete(firstKey);
@@ -379,69 +588,47 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             }
           }
 
+          // Track performance metrics
+          const responseTime = Date.now() - startTime;
+          performanceMetrics.totalRequests++;
+          performanceMetrics.avgResponseTime = 
+            (performanceMetrics.avgResponseTime * (performanceMetrics.totalRequests - 1) + responseTime) / 
+            performanceMetrics.totalRequests;
+
           // Cancel any pending debounce timers to prevent them from clearing our ghost text
           if (debounceTimer) {
             clearTimeout(debounceTimer);
             debounceTimer = null;
           }
 
-          // Only finalize if this is still the active request
-          if (activeRequestId === requestId) {
-            if (accumulatedText) {
-              // Apply the same cleaning logic for final text
-              let finalCleanedText = accumulatedText;
-              
-              // Remove the prompt from the beginning if it's duplicated
-              const promptLower = prompt.toLowerCase();
-              const cleanedLower = finalCleanedText.toLowerCase();
-              
-              if (cleanedLower.startsWith(promptLower)) {
-                finalCleanedText = accumulatedText.substring(prompt.length);
-              }
-              
-              // Also handle partial overlaps at word boundaries
-              const promptWords = prompt.split(/\s+/);
-              const lastPromptWord = promptWords[promptWords.length - 1]?.toLowerCase();
-              
-              if (lastPromptWord && finalCleanedText.toLowerCase().startsWith(lastPromptWord)) {
-                // Find where the overlap ends
-                const words = finalCleanedText.split(/\s+/);
-                if (words[0]?.toLowerCase() === lastPromptWord) {
-                  finalCleanedText = finalCleanedText.substring(words[0].length).trimStart();
-                }
-              }
-
-              view.dispatch(
-                view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
-                  ghostText: finalCleanedText,
-                  isLoading: false, // Now we're done loading
-                  requestId,
-                }),
-              );
-            } else {
-              // No content received, clear everything
-              view.dispatch(
-                view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
-                  ghostText: "",
-                  isLoading: false,
-                  requestId,
-                }),
-              );
-            }
-            // Clear active request ID after completion
-            activeRequestId = null;
-          }
+          // Clear active request ID after completion
+          activeRequestId = null;
+        } else if (activeRequestId === requestId) {
+          // No content received, clear everything
+          view.dispatch(
+            view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+              ghostText: "",
+              isLoading: false,
+              requestId,
+            }),
+          );
+          activeRequestId = null;
         }
-      } catch (_error) {
-        // Silently handle errors except abort errors
+      } catch (error: any) {
+        // Only log non-abort errors
+        if (error.name !== 'AbortError') {
+          console.error('❌ Autocomplete error:', error);
+        }
 
-        // Clear loading state on error
-        view.dispatch(
-          view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
-            ghostText: "",
-            isLoading: false,
-          }),
-        );
+        // Only clear ghost text on non-abort errors
+        if (error.name !== 'AbortError' && activeRequestId === requestId) {
+          view.dispatch(
+            view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+              ghostText: "",
+              isLoading: false,
+            }),
+          );
+        }
       }
     };
 
@@ -601,9 +788,9 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               return false;
             }
 
-            // Add throttling to prevent too frequent requests
+            // Reduced throttling for faster response
             const now = Date.now();
-            const MIN_TRIGGER_INTERVAL = 500; // Minimum 500ms between triggers
+            const MIN_TRIGGER_INTERVAL = 200; // Reduced from 500ms to 200ms
             
             if (now - lastTriggerTime < MIN_TRIGGER_INTERVAL) {
               console.log('🕒 Throttling: Too soon since last trigger');
@@ -682,7 +869,8 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               }
             }
             
-            // Set up longer delay for new requests to avoid spam
+            // Optimized delay for faster response
+            const delay = pluginState.isComposing ? options.delay * 10 : options.delay * 2; // Reduced from 5x to 2x
             debounceTimer = setTimeout(() => {
               // Check again if we're still not loading and not composing before triggering
               const currentState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
@@ -692,7 +880,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
               lastTriggerTime = Date.now(); // Update last trigger time
               triggerCompletion(view);
-            }, options.delay * 5); // Use longer delay to reduce frequency
+            }, delay);
 
             return false;
           },
@@ -733,14 +921,14 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
                 }),
               );
               
-              // After IME ends, wait longer before triggering completion
+              // After IME ends, wait before triggering completion
               // This prevents triggering on every Chinese character input
               setTimeout(() => {
                 const currentState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
                 if (!currentState.isComposing && !currentState.isLoading) {
                   triggerCompletion(view);
                 }
-              }, options.delay * 10); // Use much longer delay after IME input
+              }, options.delay * 5); // Reduced from 10x to 5x for faster IME response
               
               return false;
             },

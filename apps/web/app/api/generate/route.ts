@@ -10,6 +10,9 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "anthropic/claude-3.5-sonnet";
 // IMPORTANT! Set the runtime to edge: https://vercel.com/docs/functions/edge-functions/edge-runtime
 export const runtime = "edge";
 
+// Add cache headers for autocomplete responses
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request): Promise<Response> {
   try {
     const body = await req.json();
@@ -169,15 +172,16 @@ export async function POST(req: Request): Promise<Response> {
         {
           role: "system",
           content:
-            "IMPORTANT: Only output the text completion. Do not add any explanations, commentary, or additional information. " +
-            "You are an AI writing assistant that completes text based on context. " +
-            "Continue the text naturally and smoothly. " +
-            "Limit your response to no more than 50 characters to keep it concise. " +
-            "Use Markdown formatting when appropriate.",
+            "你是一个智能写作助手。请根据用户输入的文本，续写出自然流畅的内容。\n" +
+            "要求：\n" +
+            "1. 直接续写，不要重复用户的输入\n" +
+            "2. 生成完整的句子（至少20个字）\n" +
+            "3. 确保内容连贯自然\n" +
+            "4. 只输出续写内容，不要任何解释",
         },
         {
           role: "user",
-          content: `Continue this text: ${prompt}`,
+          content: prompt,
         },
       ])
       .run();
@@ -188,25 +192,35 @@ export async function POST(req: Request): Promise<Response> {
     console.log("Messages:", JSON.stringify(messages, null, 2));
 
     // Try multiple models in order of preference, starting with user's selected model
-    const modelsToTry = [
-      modelName, // User's selected model first
-      "anthropic/claude-3.5-sonnet",
-      "openai/gpt-4o-mini",
-      "meta-llama/llama-3.2-3b-instruct:free",
-    ].filter((model, index, arr) => arr.indexOf(model) === index); // Remove duplicates
+    // For autocomplete, prioritize faster models
+    const modelsToTry = option === "autocomplete" 
+      ? [
+          modelName, // User's selected model first
+          "openai/gpt-4o-mini", // Faster model
+          "anthropic/claude-3.5-sonnet",
+          "meta-llama/llama-3.2-3b-instruct:free",
+        ]
+      : [
+          modelName, // User's selected model first
+          "anthropic/claude-3.5-sonnet",
+          "openai/gpt-4o-mini",
+          "meta-llama/llama-3.2-3b-instruct:free",
+        ];
+    
+    const uniqueModels = modelsToTry.filter((model, index, arr) => arr.indexOf(model) === index); // Remove duplicates
 
     let response = null;
     let lastError = null;
 
-    for (const model of modelsToTry) {
+    for (const model of uniqueModels) {
       console.log(`Trying model: ${model}`);
 
       const requestBody = {
         model: model,
         messages: messages,
-        max_tokens: option === "autocomplete" ? (maxTokens || 150) : 200,
-        temperature: 0.7,
-        stream: streamRequested,
+        max_tokens: option === "autocomplete" ? Math.min(maxTokens || 150, 500) : 200,
+        temperature: option === "autocomplete" ? 0.3 : 0.7, // Even lower temperature for consistent completions
+        stream: option === "autocomplete" ? false : streamRequested, // Disable streaming for autocomplete
       };
 
       try {
@@ -230,9 +244,10 @@ export async function POST(req: Request): Promise<Response> {
               status: 200,
               headers: {
                 "Content-Type": "text/event-stream",
-                "Cache-Control": "no-cache",
+                "Cache-Control": option === "autocomplete" ? "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" : "no-cache",
                 Connection: "keep-alive",
                 "Access-Control-Allow-Origin": "*",
+                "X-Accel-Buffering": "no", // Disable Nginx buffering
               },
             });
           }
@@ -325,6 +340,8 @@ export async function POST(req: Request): Promise<Response> {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Access-Control-Allow-Origin": "*",
+        "Cache-Control": option === "autocomplete" ? "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" : "no-cache",
+        "X-Accel-Buffering": "no",
       },
     });
   } catch (error) {
