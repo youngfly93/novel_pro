@@ -83,6 +83,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       const slug = `untitled-${timestamp}`;
 
       router.push(`/page/${slug}`);
+      // Don't close sidebar on desktop
+      // onToggle is only called on mobile
     } catch (error) {
       console.error("创建页面时出错:", error);
       alert("创建页面失败，请重试");

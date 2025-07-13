@@ -7,6 +7,7 @@ import { Menu, Settings, Share, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSidebar } from "@/contexts/sidebar-context";
 
 interface PageData {
   title: string;
@@ -27,8 +28,8 @@ export default function DynamicPage() {
   const [title, setTitle] = useState("");
   const [showTitleInput, setShowTitleInput] = useState(false);
   const [isNewPage, setIsNewPage] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [parentPage, setParentPage] = useState<PageData | null>(null);
+  const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebar();
 
   // Convert slug back to readable title (utility function, kept for future use)
   const _formatTitle = (slug: string) => {
@@ -138,7 +139,7 @@ export default function DynamicPage() {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
 
       {/* Main Content */}
       <div
@@ -148,7 +149,7 @@ export default function DynamicPage() {
         <div className={`flex flex-col w-full max-w-4xl gap-4 mb-8 ${sidebarOpen ? "px-4" : "px-4 sm:px-5"}`}>
           {/* Top row with menu and actions */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)} className="gap-2">
+            <Button variant="ghost" size="sm" onClick={toggleSidebar} className="gap-2">
               <Menu className="h-4 w-4" />
             </Button>
 

@@ -7,6 +7,7 @@ import { Menu, FileText, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSidebar } from "@/contexts/sidebar-context";
 
 interface PageData {
   title: string;
@@ -25,7 +26,7 @@ export default function PagesListPage() {
   const router = useRouter();
   const [pages, setPages] = useState<PagesList>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebar();
 
   useEffect(() => {
     const loadPages = () => {
@@ -93,14 +94,14 @@ export default function PagesListPage() {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
 
       {/* Main Content */}
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : ""}`}>
         {/* Header */}
         <div className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
           <div className={`flex items-center gap-4 ${sidebarOpen ? "px-4 py-4 max-w-none" : "p-4 max-w-4xl mx-auto"}`}>
-            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)} className="gap-2">
+            <Button variant="ghost" size="sm" onClick={toggleSidebar} className="gap-2">
               <Menu className="h-4 w-4" />
             </Button>
 
