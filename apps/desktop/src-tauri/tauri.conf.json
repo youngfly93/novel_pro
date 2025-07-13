@@ -5,9 +5,9 @@
   "identifier": "com.novelpro.desktop",
   "build": {
     "frontendDist": "../web/out",
-    "beforeDevCommand": "",
+    "beforeDevCommand": "pnpm --filter novel-next-app dev",
     "beforeBuildCommand": "pnpm --filter novel-next-app build:desktop && pnpm --filter novel-next-app export",
-    "devUrl": "http://localhost:3001"
+    "devUrl": "http://localhost:3000"
   },
   "app": {
     "windows": [

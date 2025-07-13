@@ -51,11 +51,11 @@ const nextConfig = {
     ];
   },
   productionBrowserSourceMaps: true,
-  // Support for static export (needed for Tauri desktop app)
-  output: process.env.BUILD_MODE === 'desktop' ? 'export' : undefined,
-  trailingSlash: process.env.BUILD_MODE === 'desktop' ? true : false,
+  // Support for static export (needed for Tauri desktop app build, not dev)
+  output: process.env.BUILD_MODE === 'desktop' && process.env.NODE_ENV === 'production' ? 'export' : undefined,
+  trailingSlash: process.env.BUILD_MODE === 'desktop' && process.env.NODE_ENV === 'production' ? true : false,
   images: {
-    unoptimized: process.env.BUILD_MODE === 'desktop' ? true : false,
+    unoptimized: process.env.BUILD_MODE === 'desktop' && process.env.NODE_ENV === 'production' ? true : false,
   },
   // Skip dynamic route validation for static export
   experimental: {
