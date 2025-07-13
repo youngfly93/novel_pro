@@ -12,6 +12,13 @@ interface AutoCompleteState {
 
 const AUTOCOMPLETE_PLUGIN_KEY = new PluginKey("autoComplete");
 
+// Debug helper function
+const debug = (message: string, ...args: any[]) => {
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    console.log(message, ...args);
+  }
+};
+
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     autoComplete: {
@@ -30,8 +37,17 @@ export interface AutoCompleteOptions {
   onRequest?: (prompt: string, abortController: AbortController) => Promise<ReadableStream | null>;
 }
 
-// Helper function to load settings from localStorage
+// Helper function to load settings from localStorage with SSR check
 const loadAutoCompleteSettings = () => {
+  // Check if we're in a browser environment
+  if (typeof window === "undefined") {
+    return {
+      delay: 20,
+      minLength: 3,
+      maxTokens: 150,
+    };
+  }
+
   try {
     const saved = localStorage.getItem("novel-api-config");
     if (saved) {
@@ -92,11 +108,17 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           if (dispatch) {
             const pluginState = AUTOCOMPLETE_PLUGIN_KEY.getState(state) as AutoCompleteState;
             if (pluginState?.ghostText) {
-              tr.insertText(pluginState.ghostText);
+              // Use stored marks to preserve formatting
+              const storedMarks = state.storedMarks;
+              const { from } = state.selection;
+              tr.insertText(pluginState.ghostText, from, from);
+              if (storedMarks) {
+                storedMarks.forEach((mark) => tr.addStoredMark(mark));
+              }
               tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
                 ghostText: "",
                 isLoading: false,
-                requestId: Date.now().toString(), // Force clear with unique ID
+                requestId: "accepted", // Special ID to prevent immediate trigger
               });
             }
           }
@@ -138,7 +160,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       print: () => {
         const hitRate =
           (performanceMetrics.cacheHits / (performanceMetrics.cacheHits + performanceMetrics.cacheMisses)) * 100 || 0;
-        console.log("📊 AutoComplete Performance:", {
+        debug("📊 AutoComplete Performance:", {
           cacheHitRate: `${hitRate.toFixed(1)}%`,
           cacheHits: performanceMetrics.cacheHits,
           cacheMisses: performanceMetrics.cacheMisses,
@@ -154,9 +176,17 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       setInterval(() => performanceMetrics.print(), 30000);
     }
 
-    // Enhanced cache for recent completions with larger size for better hit rate
+    // Enhanced LRU cache for recent completions with better eviction strategy
     const completionCache = new Map<string, string>();
     const MAX_CACHE_SIZE = 100; // Increased for better hit rate
+
+    // LRU helper function to maintain cache size without clearing everything
+    const maintainCacheSize = (cache: Map<string, string>) => {
+      while (cache.size > MAX_CACHE_SIZE) {
+        const firstKey = cache.keys().next().value;
+        if (firstKey) cache.delete(firstKey);
+      }
+    };
 
     // Prefetch cache for predictive loading
     const prefetchCache = new Map<string, Promise<string>>();
@@ -214,7 +244,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       const { from } = view.state.selection;
       const textBefore = view.state.doc.textBetween(Math.max(0, from - 100), from);
 
-      console.log("🔍 triggerCompletion called:", {
+      debug("🔍 triggerCompletion called:", {
         textBefore: textBefore.trim(),
         length: textBefore.trim().length,
         minLength: options.minLength,
@@ -223,7 +253,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       // Quick minimum length check
       const trimmedText = textBefore.trim();
       if (trimmedText.length < options.minLength) {
-        console.log("❌ Text too short, skipping completion");
+        debug("❌ Text too short, skipping completion");
         return;
       }
 
@@ -257,8 +287,12 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       for (const cacheKey of cacheKeys) {
         const cachedCompletion = completionCache.get(cacheKey);
         if (cachedCompletion) {
-          console.log("⚡ Cache hit for:", cacheKey);
+          debug("⚡ Cache hit for:", cacheKey);
           performanceMetrics.cacheHits++;
+
+          // Move to end for LRU (delete and re-add)
+          completionCache.delete(cacheKey);
+          completionCache.set(cacheKey, cachedCompletion);
 
           // Instantly show cached completion
           view.dispatch(
@@ -282,7 +316,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       for (const cacheKey of cacheKeys) {
         const prefetchPromise = prefetchCache.get(cacheKey);
         if (prefetchPromise) {
-          console.log("🔮 Prefetch hit for:", cacheKey);
+          debug("🔮 Prefetch hit for:", cacheKey);
           performanceMetrics.prefetchHits++;
 
           prefetchPromise.then((completion) => {
@@ -302,7 +336,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
         }
       }
 
-      console.log("🌐 Cache miss, requesting new completion");
+      debug("🌐 Cache miss, requesting new completion");
       performanceMetrics.cacheMisses++;
       requestCompletion(view, prompt);
     };
@@ -314,8 +348,10 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
       try {
         let apiConfig = null;
         try {
-          const savedConfig = localStorage.getItem("novel-api-config");
-          if (savedConfig) apiConfig = JSON.parse(savedConfig);
+          if (typeof window !== "undefined") {
+            const savedConfig = localStorage.getItem("novel-api-config");
+            if (savedConfig) apiConfig = JSON.parse(savedConfig);
+          }
         } catch (_e) {}
 
         const requestBody: {
@@ -384,9 +420,11 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           // Load API config from localStorage
           let apiConfig = null;
           try {
-            const savedConfig = localStorage.getItem("novel-api-config");
-            if (savedConfig) {
-              apiConfig = JSON.parse(savedConfig);
+            if (typeof window !== "undefined") {
+              const savedConfig = localStorage.getItem("novel-api-config");
+              if (savedConfig) {
+                apiConfig = JSON.parse(savedConfig);
+              }
             }
           } catch (_e) {
             // Ignore localStorage errors
@@ -478,7 +516,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
                   const content = dataToProcess.choices?.[0]?.delta?.content;
                   if (content) {
                     accumulatedText += content;
-                    console.log("📝 Streaming content:", { chunk: content, total: accumulatedText });
+                    debug("📝 Streaming content:", { chunk: content, total: accumulatedText });
 
                     // Only update if this is still the active request
                     if (activeRequestId === requestId) {
@@ -537,7 +575,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               break;
             }
           }
-          console.log("💬 Non-streaming response:", { content: accumulatedText });
+          debug("💬 Non-streaming response:", { content: accumulatedText });
         }
 
         // Process the accumulated text (now from either streaming or non-streaming)
@@ -754,7 +792,13 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           handleKeyDown(view, event) {
             const state = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
 
-            // Accept ghost text with Tab
+            // Check if we're in a code block - if so, let Tab work normally for indentation
+            const $pos = view.state.selection.$from;
+            if ($pos.parent.type.name === "codeBlock") {
+              return false; // Let default Tab behavior work in code blocks
+            }
+
+            // Accept ghost text with Tab (only outside code blocks)
             if (event.key === "Tab" && state?.ghostText) {
               event.preventDefault();
               editor.commands.acceptGhostText();
@@ -783,7 +827,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
               // Clear on editing keys OR typed characters (when not composing)
               if (isEditingKey || isTypedChar) {
-                console.log("🧹 Clearing ghost text on keydown:", event.key);
+                debug("🧹 Clearing ghost text on keydown:", event.key);
                 view.dispatch(
                   view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
                     ghostText: "",
@@ -802,7 +846,13 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
             // Don't do anything if IME is composing (state managed by composition events)
             if (pluginState.isComposing) {
-              console.log("🚫 Skipping handleTextInput during IME composition");
+              debug("🚫 Skipping handleTextInput during IME composition");
+              return false;
+            }
+
+            // Skip if we just accepted a completion to prevent immediate re-trigger
+            if (pluginState.requestId === "accepted") {
+              lastTriggerTime = Date.now(); // Update to prevent immediate trigger
               return false;
             }
 
@@ -811,7 +861,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             const MIN_TRIGGER_INTERVAL = 200; // Reduced from 500ms to 200ms
 
             if (now - lastTriggerTime < MIN_TRIGGER_INTERVAL) {
-              console.log("🕒 Throttling: Too soon since last trigger");
+              debug("🕒 Throttling: Too soon since last trigger");
               // Still clear ghost text but don't trigger new completion
               if (pluginState.ghostText) {
                 view.dispatch(
@@ -827,7 +877,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
             // Clear existing ghost text when user continues typing
             if (pluginState.ghostText) {
-              console.log("🧹 Clearing ghost text on handleTextInput");
+              debug("🧹 Clearing ghost text on handleTextInput");
               view.dispatch(
                 view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
                   ghostText: "",
@@ -837,10 +887,8 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               );
             }
 
-            // Clear any stale cache entries periodically to prevent stuck content
-            if (completionCache.size > MAX_CACHE_SIZE * 0.8) {
-              completionCache.clear();
-            }
+            // Maintain cache size using LRU eviction instead of clearing everything
+            maintainCacheSize(completionCache);
 
             // Don't trigger new completion if we're currently loading
             if (pluginState.isLoading) {
@@ -874,7 +922,12 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               for (const cacheKey of cacheKeys) {
                 const cachedCompletion = completionCache.get(cacheKey);
                 if (cachedCompletion) {
-                  console.log("⚡ Instant cache hit in handleTextInput");
+                  debug("⚡ Instant cache hit in handleTextInput");
+
+                  // Move to end for LRU (delete and re-add)
+                  completionCache.delete(cacheKey);
+                  completionCache.set(cacheKey, cachedCompletion);
+
                   view.dispatch(
                     view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
                       ghostText: cachedCompletion,
@@ -912,7 +965,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
             compositionstart(view) {
               // IME composition started (e.g., Chinese pinyin input)
-              console.log("🈲 IME composition started");
+              debug("🈲 IME composition started");
               view.dispatch(
                 view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
                   isComposing: true,
@@ -932,7 +985,7 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
             compositionend(view) {
               // IME composition ended
-              console.log("✅ IME composition ended");
+              debug("✅ IME composition ended");
               view.dispatch(
                 view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
                   isComposing: false,
