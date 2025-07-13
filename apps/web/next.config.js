@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   redirects: async () => {
+    // Disable redirects for desktop build (static export)
+    if (process.env.BUILD_MODE === 'desktop') {
+      return [];
+    }
+    
     return [
       {
         source: "/github",
@@ -46,6 +51,16 @@ const nextConfig = {
     ];
   },
   productionBrowserSourceMaps: true,
+  // Support for static export (needed for Tauri desktop app)
+  output: process.env.BUILD_MODE === 'desktop' ? 'export' : undefined,
+  trailingSlash: process.env.BUILD_MODE === 'desktop' ? true : false,
+  images: {
+    unoptimized: process.env.BUILD_MODE === 'desktop' ? true : false,
+  },
+  // Skip dynamic route validation for static export
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
 };
 
 module.exports = nextConfig;

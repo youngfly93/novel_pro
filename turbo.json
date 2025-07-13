@@ -56,6 +56,13 @@
     },
     "release": {
       "cache": false
+    },
+    "desktop#build": {
+      "dependsOn": ["novel-next-app#build:desktop", "novel-next-app#export"],
+      "outputs": ["apps/desktop/src-tauri/target/**"]
+    },
+    "desktop#dev": {
+      "cache": false
     }
   }
 }

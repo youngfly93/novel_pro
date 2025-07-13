@@ -1,4 +1,4 @@
-import DynamicPageClient from "./page-client";
+import type { ReactNode } from 'react';
 
 // Required for static export with dynamic routes
 export async function generateStaticParams() {
@@ -6,6 +6,10 @@ export async function generateStaticParams() {
   return [];
 }
 
-export default function DynamicPage() {
-  return <DynamicPageClient />;
+interface PageLayoutProps {
+  children: ReactNode;
+}
+
+export default function PageLayout({ children }: PageLayoutProps) {
+  return children;
 }

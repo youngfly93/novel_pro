@@ -41,7 +41,17 @@
       "Bash(git restore:*)",
       "mcp__zen__analyze",
       "Bash(pnpm -F novel lint --write)",
-      "Bash(PORT=3002 pnpm dev)"
+      "Bash(PORT=3002 pnpm dev)",
+      "Bash(pnpm turbo format:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(rustc:*)",
+      "Bash(source:*)",
+      "Bash(rustup target:*)",
+      "Bash(pnpm setup:*)",
+      "Bash(pnpm init:*)",
+      "Bash(tauri init:*)",
+      "Bash(pnpm --filter novel-next-app add @tauri-apps/api)",
+      "Bash(pnpm --filter novel-next-app build:desktop)"
     ],
     "deny": []
   }

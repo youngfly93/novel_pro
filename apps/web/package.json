@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
+    "build:desktop": "BUILD_MODE=desktop next build",
+    "export": "BUILD_MODE=desktop next export -o out",
     "start": "next start",
     "lint": "biome lint .",
     "format": "biome format . ",
@@ -21,6 +23,7 @@
     "@radix-ui/react-separator": "^1.0.3",
     "@radix-ui/react-slot": "^1.0.2",
     "@tailwindcss/typography": "^0.5.10",
+    "@tauri-apps/api": "^2.6.0",
     "@tiptap/core": "^2.25.0",
     "@tiptap/pm": "^2.25.0",
     "@tiptap/react": "^2.25.0",
