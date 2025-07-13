@@ -16,10 +16,10 @@ export default function Page() {
 
       {/* Main Content */}
       <div
-        className={`flex-1 flex flex-col items-center gap-4 py-4 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : ""}`}
+        className={`flex-1 flex flex-col items-center gap-2 py-4 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : ""}`}
       >
         <div
-          className={`flex w-full max-w-4xl items-center gap-2 sm:mb-[calc(10vh)] ${sidebarOpen ? "px-4" : "px-4 sm:px-5"}`}
+          className={`flex w-full max-w-4xl items-center gap-2 mb-2 ${sidebarOpen ? "px-4" : "px-4 sm:px-5"}`}
         >
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)} className="gap-2">
             <Menu className="h-4 w-4" />

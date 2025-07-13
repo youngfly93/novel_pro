@@ -133,7 +133,7 @@ const TailwindAdvancedEditor = ({
         <EditorContent
           initialContent={initialContent}
           extensions={extensions}
-          className={`editor-a4-layout ${darkMode ? "dark" : ""} relative sm:mb-[calc(10vh)] sm:rounded-lg`}
+          className={`editor-a4-layout ${darkMode ? "dark" : ""} relative sm:rounded-lg`}
           editorProps={{
             handleDOMEvents: {
               keydown: (_view, event) => handleCommandNavigation(event),

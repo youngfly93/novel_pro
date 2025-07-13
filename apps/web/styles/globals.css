@@ -103,7 +103,7 @@
     min-height: 1123px; /* 297mm */
     width: 100%;
     margin: 0 auto;
-    padding: 96px 72px; /* 1 inch margins */
+    padding: 48px 72px 96px; /* Reduced top padding, keep sides and bottom */
     background: white;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     overflow-wrap: break-word;
@@ -123,7 +123,7 @@
     .editor-a4-layout {
       width: calc(100% - 32px);
       margin: 0 16px;
-      padding: 48px 24px;
+      padding: 24px 24px 48px; /* Reduced top padding for mobile */
       min-height: auto;
     }
   }
