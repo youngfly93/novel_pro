@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 // Required for static export with dynamic routes
 export async function generateStaticParams() {

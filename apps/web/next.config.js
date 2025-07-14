@@ -59,7 +59,7 @@ const nextConfig = {
   },
   // Skip dynamic route validation for static export
   experimental: {
-    missingSuspenseWithCSRBailout: false,
+    // Remove invalid option - this was deprecated
   },
 };
 

@@ -51,7 +51,14 @@
       "Bash(pnpm init:*)",
       "Bash(tauri init:*)",
       "Bash(pnpm --filter novel-next-app add @tauri-apps/api)",
-      "Bash(pnpm --filter novel-next-app build:desktop)"
+      "Bash(pnpm --filter novel-next-app build:desktop)",
+      "Bash(cargo --version)",
+      "Bash(pnpm --filter novel-desktop dev)",
+      "Bash(kill:*)",
+      "Bash(pnpm --filter novel-next-app dev)",
+      "Bash(open http://localhost:3001)",
+      "Bash(pnpm tauri:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

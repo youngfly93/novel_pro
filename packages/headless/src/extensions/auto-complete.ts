@@ -263,6 +263,28 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
         return;
       }
 
+      // Check if cursor is at the end of a paragraph or line
+      // This prevents ghost text from appearing in the middle of existing text
+      const { to } = view.state.selection;
+
+      // Check if we're at the end of the current node (paragraph)
+      const isAtEndOfNode = to >= $pos.end($pos.depth);
+
+      // Also check if there's any text immediately after the cursor (even without whitespace)
+      const textAfter = view.state.doc.textBetween(to, Math.min(view.state.doc.content.size, to + 1));
+      const hasTextAfter = textAfter.length > 0;
+
+      if (!isAtEndOfNode || hasTextAfter) {
+        debug("❌ Cursor not at end of paragraph/node, skipping completion to prevent text interruption", {
+          isAtEndOfNode,
+          hasTextAfter,
+          textAfter: textAfter,
+          cursorPos: to,
+          nodeEnd: $pos.end($pos.depth),
+        });
+        return;
+      }
+
       const prompt = trimmedText;
 
       // Enhanced cache key strategies for better hit rate
@@ -687,6 +709,22 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
 
           apply(tr, state: AutoCompleteState): AutoCompleteState {
             const meta = tr.getMeta(AUTOCOMPLETE_PLUGIN_KEY);
+
+            // B. 监听 selection 改变，及时清理 - 关键修复！
+            if (tr.selectionSet && state.ghostText) {
+              const { from } = tr.selection;
+              const textAfter = tr.doc.textBetween(from, Math.min(tr.doc.content.size, from + 1));
+              if (textAfter.trim().length > 0) {
+                debug("🧹 Selection changed: clearing ghost text because cursor moved to middle of text");
+                return {
+                  ...state,
+                  ghostText: "",
+                  isLoading: false,
+                  requestId: Date.now().toString(),
+                };
+              }
+            }
+
             if (meta) {
               // Cancel existing request when setting new ghost text
               if (meta.ghostText !== undefined && state.abortController) {
@@ -721,13 +759,21 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
               return DecorationSet.empty;
             }
 
+            const { from } = state.selection;
+
+            // A. 渲染前判断 "后方是否为空" - 关键修复！
+            // 检查光标后面是否还有文字，如果有则不显示影子文字
+            const textAfter = state.doc.textBetween(from, Math.min(state.doc.content.size, from + 10));
+            if (textAfter.trim().length > 0) {
+              debug("🚫 Ghost text blocked: cursor not at end, text after cursor:", textAfter);
+              return DecorationSet.empty;
+            }
+
             // Temporarily disable IME blocking to debug the stuck ghost text issue
             // TODO: Re-enable with better logic after confirming ghost text updates work
             // if (pluginState.isComposing) {
             //   return DecorationSet.empty;
             // }
-
-            const { from } = state.selection;
 
             try {
               const ghostText = pluginState.ghostText;
@@ -904,9 +950,26 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
             // Then set up minimal delay for new requests
 
             // First, try immediate completion if we have cache
-            const { from } = view.state.selection;
+            const { from, to } = view.state.selection;
             const textBefore = view.state.doc.textBetween(Math.max(0, from - 100), from);
             const trimmedText = textBefore.trim();
+
+            // Check if cursor is at the end of text before trying completion
+            const $pos = view.state.selection.$from;
+            const isAtEndOfNode = to >= $pos.end($pos.depth);
+            const textAfter = view.state.doc.textBetween(to, Math.min(view.state.doc.content.size, to + 1));
+            const hasTextAfter = textAfter.length > 0;
+
+            if (!isAtEndOfNode || hasTextAfter) {
+              debug("❌ Cursor not at end of paragraph/node in handleTextInput, skipping completion", {
+                isAtEndOfNode,
+                hasTextAfter,
+                textAfter: textAfter,
+                cursorPos: to,
+                nodeEnd: $pos.end($pos.depth),
+              });
+              return false;
+            }
 
             if (trimmedText.length >= options.minLength) {
               // Check cache immediately for instant response
@@ -957,6 +1020,22 @@ export const AutoComplete = Extension.create<AutoCompleteOptions>({
           },
 
           handleDOMEvents: {
+            // C. 鼠标点击也算导航键 - 清理影子文字
+            mousedown(view, _event) {
+              const pluginState = AUTOCOMPLETE_PLUGIN_KEY.getState(view.state) as AutoCompleteState;
+              if (pluginState.ghostText) {
+                debug("🖱️ Mouse click: clearing ghost text");
+                view.dispatch(
+                  view.state.tr.setMeta(AUTOCOMPLETE_PLUGIN_KEY, {
+                    ghostText: "",
+                    isLoading: false,
+                    requestId: Date.now().toString(),
+                  }),
+                );
+              }
+              return false;
+            },
+
             // Handle input events more carefully
             input(_view, _event) {
               // Let handleTextInput handle this instead to avoid double clearing

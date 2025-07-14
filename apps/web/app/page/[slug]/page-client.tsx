@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSidebar } from "@/contexts/sidebar-context";
+import { useBackground } from "@/contexts/background-context";
 
 interface PageData {
   title: string;
@@ -31,6 +32,7 @@ export default function DynamicPageClient() {
   const [isNewPage, setIsNewPage] = useState(false);
   const [parentPage, setParentPage] = useState<PageData | null>(null);
   const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebar();
+  const { backgroundImage } = useBackground();
 
   // Convert slug back to readable title (utility function, kept for future use)
   const _formatTitle = (slug: string) => {
@@ -115,7 +117,7 @@ export default function DynamicPageClient() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={`flex min-h-screen ${!backgroundImage ? "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50" : ""}`}>
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
 

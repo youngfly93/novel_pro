@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
 import useLocalStorage from "@/hooks/use-local-storage";
 import { SidebarProvider } from "@/contexts/sidebar-context";
+import { BackgroundProvider } from "@/contexts/background-context";
 
 export const AppContext = createContext<{
   font: string;
@@ -27,18 +28,20 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   return (
     <ThemeProvider attribute="class" enableSystem disableTransitionOnChange defaultTheme="system">
-      <SidebarProvider>
-        <AppContext.Provider
-          value={{
-            font,
-            setFont,
-          }}
-        >
-          <ToasterProvider />
-          {children}
-          <Analytics />
-        </AppContext.Provider>
-      </SidebarProvider>
+      <BackgroundProvider>
+        <SidebarProvider>
+          <AppContext.Provider
+            value={{
+              font,
+              setFont,
+            }}
+          >
+            <ToasterProvider />
+            {children}
+            <Analytics />
+          </AppContext.Provider>
+        </SidebarProvider>
+      </BackgroundProvider>
     </ThemeProvider>
   );
 }

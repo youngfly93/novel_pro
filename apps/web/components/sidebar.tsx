@@ -1,15 +1,16 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/tailwind/ui/button";
 import { Home, FileText, Plus, Settings, X, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { useBackground } from "@/contexts/background-context";
 
 interface PageData {
   title: string;
-  content: any;
+  content: unknown;
   createdAt: string;
   updatedAt: string;
   parentSlug?: string;
@@ -28,8 +29,41 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { backgroundImage } = useBackground();
   const [pages, setPages] = useState<PagesList>({});
   const [collapsedPages, setCollapsedPages] = useState<Set<string>>(new Set());
+  const [selectedPageSlug, setSelectedPageSlug] = useState<string | null>(null);
+
+  const deletePage = useCallback(
+    (slug: string, e?: React.MouseEvent | React.KeyboardEvent) => {
+      console.log("deletePage called with slug:", slug);
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      try {
+        const updatedPages = { ...pages };
+        delete updatedPages[slug];
+        localStorage.setItem("novel-pages", JSON.stringify(updatedPages));
+        setPages(updatedPages);
+
+        // If currently on the deleted page, redirect to home
+        if (pathname === `/page/${slug}`) {
+          router.push("/");
+        }
+
+        // Clear selection after deletion
+        setSelectedPageSlug(null);
+        console.log("Page deleted successfully:", slug);
+      } catch (error) {
+        console.error("删除页面时出错:", error);
+        // In desktop app, we can't use alert, so just log the error
+        console.error("删除页面失败");
+      }
+    },
+    [pages, pathname, router],
+  );
 
   useEffect(() => {
     const loadPages = () => {
@@ -65,6 +99,37 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     };
   }, []);
 
+  // Handle keyboard events for deletion
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Delete key is pressed and a page is selected
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedPageSlug) {
+        // Prevent deletion on input fields
+        const target = e.target as HTMLElement;
+        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.contentEditable === "true") {
+          return;
+        }
+
+        // For Tauri desktop app, we need to ensure the sidebar has focus
+        const sidebarElement = document.getElementById("sidebar-content");
+        if (sidebarElement && !sidebarElement.contains(target)) {
+          // If the event target is not within the sidebar, ignore it
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        deletePage(selectedPageSlug);
+      }
+    };
+
+    // Use capture phase to ensure we get the event first
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [selectedPageSlug, deletePage]);
+
   const togglePageCollapse = (slug: string) => {
     const newCollapsedPages = new Set(collapsedPages);
     if (newCollapsedPages.has(slug)) {
@@ -89,30 +154,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       console.error("创建页面时出错:", error);
       alert("创建页面失败，请重试");
     }
-  };
-
-  const deletePage = (slug: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const result = confirm("确定要删除此页面吗？");
-    if (result) {
-      try {
-        const updatedPages = { ...pages };
-        delete updatedPages[slug];
-        localStorage.setItem("novel-pages", JSON.stringify(updatedPages));
-        setPages(updatedPages);
-
-        // If currently on the deleted page, redirect to home
-        if (pathname === `/page/${slug}`) {
-          router.push("/");
-        }
-      } catch (error) {
-        console.error("删除页面时出错:", error);
-        alert("删除页面失败，请重试");
-      }
-    }
-    // 如果用户取消，什么都不做
   };
 
   const isCurrentPage = (path: string) => {
@@ -166,13 +207,21 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={`
-        fixed top-0 left-0 h-full bg-gray-50 border-r border-gray-200 z-50 transition-transform duration-300 ease-in-out
+        fixed top-0 left-0 h-full border-r border-gray-200 z-50 transition-all duration-300 ease-in-out
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         w-64 flex flex-col
+        ${backgroundImage 
+          ? "bg-white/70 backdrop-blur-md border-white/30" 
+          : "bg-gray-50"
+        }
       `}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className={`flex items-center justify-between p-4 transition-colors duration-300 ${
+          backgroundImage 
+            ? "border-b border-white/30 bg-white/50" 
+            : "border-b border-gray-200"
+        }`}>
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-gray-700" />
             <span className="font-semibold text-gray-900">Novel Pro</span>
@@ -183,7 +232,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div id="sidebar-content" className="flex-1 overflow-y-auto p-4 space-y-2" tabIndex={-1}>
           {/* Home */}
           <Link href="/">
             <Button variant={isCurrentPage("/") ? "secondary" : "ghost"} className="w-full justify-start gap-3">
@@ -201,7 +250,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               return (
                 <div key={slug} className="space-y-1">
                   {/* Parent Page */}
-                  <div className="group flex items-center justify-between">
+                  <div className={`group flex items-center justify-between rounded-md transition-colors duration-150 px-1 py-1 ${
+                    backgroundImage 
+                      ? "hover:bg-white/50" 
+                      : "hover:bg-gray-100"
+                  }`}>
                     <div className="flex items-center flex-1">
                       {/* Collapse/Expand Button */}
                       {hasSubPages && (
@@ -222,46 +275,99 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       <Link href={`/page/${slug}`} className="flex-1">
                         <Button
                           variant={isCurrentPage(`/page/${slug}`) ? "secondary" : "ghost"}
-                          className={`w-full justify-start gap-3 ${hasSubPages ? "ml-0" : "ml-7"}`}
+                          className={`w-full justify-start gap-3 ${hasSubPages ? "ml-0" : "ml-7"} ${selectedPageSlug === slug ? "ring-2 ring-blue-500" : ""} hover:bg-transparent ${
+                            backgroundImage 
+                              ? "group-hover:bg-white/30" 
+                              : "group-hover:bg-gray-50"
+                          }`}
+                          onClick={(e) => {
+                            setSelectedPageSlug(slug);
+                            // Ensure the sidebar content has focus for keyboard events
+                            const sidebarElement = document.getElementById("sidebar-content");
+                            if (sidebarElement) {
+                              sidebarElement.focus();
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Delete" || e.key === "Backspace") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              deletePage(slug, e);
+                            }
+                          }}
                         >
                           <FileText className="h-4 w-4" />
                           <span className="truncate">{page.title || "无标题"}</span>
                         </Button>
                       </Link>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 text-red-500 hover:text-red-700"
-                      onClick={(e) => deletePage(slug, e)}
+                    <button
+                      className="h-7 w-7 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                      onClick={(e) => {
+                        console.log("Delete button clicked for slug:", slug);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deletePage(slug, e);
+                      }}
+                      type="button"
                     >
                       <X className="h-4 w-4" />
-                    </Button>
+                    </button>
                   </div>
 
                   {/* Sub Pages */}
                   {hasSubPages && !isCollapsed && (
                     <div className="ml-7 space-y-1">
                       {subPagesByParent[slug].map(([subSlug, subPage]) => (
-                        <div key={subSlug} className="group flex items-center justify-between">
+                        <div
+                          key={subSlug}
+                          className={`group flex items-center justify-between rounded-md transition-colors duration-150 px-1 py-1 ${
+                            backgroundImage 
+                              ? "hover:bg-white/50" 
+                              : "hover:bg-gray-100"
+                          }`}
+                        >
                           <Link href={`/page/${subSlug}`} className="flex-1">
                             <Button
                               variant={isCurrentPage(`/page/${subSlug}`) ? "secondary" : "ghost"}
-                              className="w-full justify-start gap-3 text-sm"
+                              className={`w-full justify-start gap-3 text-sm ${selectedPageSlug === subSlug ? "ring-2 ring-blue-500" : ""} hover:bg-transparent ${
+                                backgroundImage 
+                                  ? "group-hover:bg-white/30" 
+                                  : "group-hover:bg-gray-50"
+                              }`}
                               size="sm"
+                              onClick={(e) => {
+                                setSelectedPageSlug(subSlug);
+                                // Ensure the sidebar content has focus for keyboard events
+                                const sidebarElement = document.getElementById("sidebar-content");
+                                if (sidebarElement) {
+                                  sidebarElement.focus();
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Delete" || e.key === "Backspace") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  deletePage(subSlug, e);
+                                }
+                              }}
                             >
                               <FileText className="h-3 w-3" />
                               <span className="truncate">{subPage.title || "无标题"}</span>
                             </Button>
                           </Link>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                            onClick={(e) => deletePage(subSlug, e)}
+                          <button
+                            className="h-6 w-6 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                            onClick={(e) => {
+                              console.log("Delete button clicked for subSlug:", subSlug);
+                              e.preventDefault();
+                              e.stopPropagation();
+                              deletePage(subSlug, e);
+                            }}
+                            type="button"
                           >
                             <X className="h-3 w-3" />
-                          </Button>
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -282,7 +388,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 space-y-2">
+        <div className={`p-4 space-y-2 transition-colors duration-300 ${
+          backgroundImage 
+            ? "border-t border-white/30 bg-white/50" 
+            : "border-t border-gray-200"
+        }`}>
           <Link href="/settings">
             <Button variant="ghost" className="w-full justify-start gap-3">
               <Settings className="h-4 w-4" />

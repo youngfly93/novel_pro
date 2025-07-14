@@ -5,12 +5,14 @@ import { Button } from "@/components/tailwind/ui/button";
 import Sidebar from "@/components/sidebar";
 import { Menu, GithubIcon } from "lucide-react";
 import { useSidebar } from "@/contexts/sidebar-context";
+import { useBackground } from "@/contexts/background-context";
 
 export default function Page() {
   const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebar();
+  const { backgroundImage } = useBackground();
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={`flex min-h-screen ${!backgroundImage ? "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50" : ""}`}>
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
 
