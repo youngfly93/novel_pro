@@ -224,7 +224,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         }`}>
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-gray-700" />
-            <span className="font-semibold text-gray-900">Novel Pro</span>
+            <span className="font-semibold text-gray-900">FuckNotion</span>
           </div>
           <Button variant="ghost" size="sm" onClick={onToggle} className="lg:hidden">
             <X className="h-4 w-4" />

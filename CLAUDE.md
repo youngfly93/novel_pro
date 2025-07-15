@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Novel Pro is an enhanced version of the open-source Notion-style WYSIWYG editor with AI-powered autocompletions. It features OpenRouter integration for multiple AI models with automatic fallback, runtime API configuration, and enhanced AI capabilities. Built as a monorepo with Next.js, TypeScript, and Tiptap (based on ProseMirror).
+FuckNotion is an enhanced version of the open-source Notion-style WYSIWYG editor with AI-powered autocompletions. It features OpenRouter integration for multiple AI models with automatic fallback, runtime API configuration, and enhanced AI capabilities. Built as a monorepo with Next.js, TypeScript, and Tiptap (based on ProseMirror).
 
 ## Architecture
 

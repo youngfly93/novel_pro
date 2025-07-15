@@ -1,4 +1,4 @@
-# Novel Pro - AI-Powered WYSIWYG Editor
+# FuckNotion - AI-Powered WYSIWYG Editor
 
 A Notion-style WYSIWYG editor with AI-powered autocompletion, enhanced with OpenRouter integration for multiple AI models.
 
